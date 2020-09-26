@@ -191,9 +191,3 @@ Command line:
 
 `jstack command`：`jstack`命令用于可以用来打印`java`进程中各个线程的栈轨迹，以及这些线程所持有的锁。`jstack`的其中一个应用场景便是死锁检测，可以用`jstack`获取一个已经死锁了的`java`程序的栈信息。
 
-### 相关扩展阅读：
-
-1. `java8`中`lambda`表达式`feature`：https://github.com/SamMACode/campus/blob/master/docs/Java8-lambda-feature.md
-2. `git`版本控制系统：https://github.com/SamMACode/campus/blob/master/docs/Git-version-control.md
-3. `maven`应用构建组件：https://github.com/SamMACode/campus/blob/master/docs/Maven-archetype-doc.md
-
