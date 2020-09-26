@@ -2,7 +2,7 @@
 title:               NewYork CITY
 tagline:             '记录下日常工作与学习哈～，还有技术分享哦。。🎉'
 description:         'A reserved <a href="https://jekyllrb.com" target="_blank">Jekyll</a> theme that places the utmost gravity on content with a hidden drawer. Made by <a href="https://twitter.com/mdo" target="_blank">@mdo</a>.'
-url:                 http://lanyon.getpoole.com
+url:                 https://sammacode.github.io
 baseurl:             ''
 paginate:            4
 permalink:           pretty
