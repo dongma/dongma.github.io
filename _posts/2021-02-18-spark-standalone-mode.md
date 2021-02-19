@@ -6,7 +6,7 @@ title: spark standalone模式启动源码分析
 
 > spark目前支持以standalone、Mesos、YARN、Kubernetes等方式部署，本文主要分析apache spark在standalone模式下资源的初始化、用户application的提交，在spark-submit脚本提交应用时，如何将--extraClassPath等参数传递给Driver等相关流程。
 
-从`spark-submit.sh`提交用户`app`开始进行分析，`--class` 为`jar`包中的`main`类，`/path/to/examples.jar`为用户自定义的`jar`包、`1000`为运行`SparkPi`所需要的参数。
+从`spark-submit.sh`提交用户`app`开始进行分析，`--class` 为`jar`包中的`main`类，`/path/to/examples.jar`为用户自定义的`jar`包、`1000`为运行`SparkPi`所需要的参数（基于`spark 2.4.5`分析）。
 
 ```shell
 # Run on a Spark standalone cluster in client deploy mode
@@ -51,7 +51,7 @@ done < <(build_command "$@")
 
 ```scala
 public static void main(String[] argsArray) throws Exception {  
-		/* 通过spark-submit脚本启动时为此形式，exec "${SPARK_HOME}"/bin/spark-class org.apache.spark.deploy.SparkSubmit "$@" */
+    /* 通过spark-submit脚本启动时为此形式，exec "${SPARK_HOME}"/bin/spark-class org.apache.spark.deploy.SparkSubmit "$@" */
     if (className.equals("org.apache.spark.deploy.SparkSubmit")) {
       AbstractCommandBuilder builder = new SparkSubmitCommandBuilder(args);
       /* 从spark-submit.sh中解析请求参数，获取spark参数构建执行命令 AbstractCommandBuilder#buildCommand */
@@ -152,6 +152,347 @@ private def runMain(args: SparkSubmitArguments, uninitLog: Boolean): Unit = {
   }
 }
 ```
+
+在之前调用`prepareSubmitEnvironment(args)`时已将`mainClass`实例化为`RestSubmissionClient`，使用`app.start(childArgs.toArray, sparkConf)`使用`restclient`提交请求，在`RestSubmissionClient.filterSystemEnvironment(sys.env)`方法会过滤掉非`SPARK_`或`MESOS_`开头的环境变量。
+
+```scala
+override def start(args: Array[String], conf: SparkConf): Unit = {
+  if (args.length < 2) {
+    sys.error("Usage: RestSubmissionClient [app resource] [main class] [app args*]")
+    sys.exit(1)
+  }
+  val appResource = args(0)
+  val mainClass = args(1)
+  val appArgs = args.slice(2, args.length)  /* 参数的顺序是(args.primaryResource(用户jar), args.mainClass, args.childArgs) */
+  // 过滤系统中的环境变量，只保留以 SPARK_ or MESOS_开头的环境变量
+  val env = RestSubmissionClient.filterSystemEnvironment(sys.env)
+  run(appResource, mainClass, appArgs, conf, env)
+}
+```
+
+追踪到`RestSubmissionClientApp#run`方法，将`sparkConf`转换为`sparkProperties`并进行过滤（只保留`spark.`开头的属性），继续跟踪`client.createSubmission(submitRequest)`提交`rest`请求。
+
+```scala
+/** Submits a request to run the application and return the response. Visible for testing. */
+def run(
+  appResource: String,
+  mainClass: String,
+  appArgs: Array[String],
+  conf: SparkConf,
+  env: Map[String, String] = Map()): SubmitRestProtocolResponse = {
+  val master = conf.getOption("spark.master").getOrElse {
+    throw new IllegalArgumentException("'spark.master' must be set.")
+  }
+  /* SparkConf创建的时候获取的配置 (以spark.开头的), 转换为SparkProperties */
+  val sparkProperties = conf.getAll.toMap
+  val client = new RestSubmissionClient(master)
+  val submitRequest = client.constructSubmitRequest(
+    appResource, mainClass, appArgs, sparkProperties, env)
+  /* 发送创建好的消息Message(submitRequest)到Driver端, postJson(url, request.toJson)解析rest返回的结果 */
+  client.createSubmission(submitRequest)
+}
+```
+
+在``RestSubmissionClientApp#createSubmission()`方法中验证所有`masters`地址，开始构建`submitUrl`然后逐个向`master`发送请求。在每次发送请求时都会验证`master`是否可用，当不可用时会将其添加到`lostMasters`列表中。至此，在`standalone`模式下提交一个`spark application`的流程就到此为止。
+
+```scala
+/**
+ * Submit an application specified by the parameters in the provided request.
+ * If the submission was successful, poll the status of the submission and report
+ * it to the user. Otherwise, report the error message provided by the server.
+ */
+def createSubmission(request: CreateSubmissionRequest): SubmitRestProtocolResponse = {
+  logInfo(s"Submitting a request to launch an application in $master.")
+  var handled: Boolean = false
+  var response: SubmitRestProtocolResponse = null
+  for (m <- masters if !handled) {
+    validateMaster(m)
+    val url = getSubmitUrl(m)
+    response = postJson(url, request.toJson)
+    response match {
+      case s: CreateSubmissionResponse =>
+      if (s.success) {
+        reportSubmissionStatus(s)
+        handleRestResponse(s)
+        handled = true
+      }
+      case unexpected =>
+      handleUnexpectedRestResponse(unexpected)
+    }
+  }
+  response
+}
+```
+
+客户端提交应用的部分看完了，现在来分析`master`端如何接收请求并进行处理，在`start-master.sh`脚本中存在以下脚本，可以以`org.apache.spark.deploy.master.Master`作为分析代码的入口。
+
+```sh
+# NOTE: This exact class name is matched downstream by SparkSubmit.
+# Any changes need to be reflected there.
+CLASS="org.apache.spark.deploy.master.Master"
+if [ "$SPARK_MASTER_WEBUI_PORT" = "" ]; then
+  SPARK_MASTER_WEBUI_PORT=8080
+fi
+
+"${SPARK_HOME}/sbin"/spark-daemon.sh start $CLASS 1 \
+  --host $SPARK_MASTER_HOST --port $SPARK_MASTER_PORT --webui-port $SPARK_MASTER_WEBUI_PORT \
+  $ORIGINAL_ARGS
+```
+
+在`Master#main`方法中启动了`RPC`运行环境以及`Endpoint`，`RpcEndpoint`：`RPC`端点 ，`Spark`针对于每个节点（`Client/Master/Worker`）都称之一个`Rpc`端点，且都实现`RpcEndpoint`接口，内部根据不同端点的需求，设计不同的消息和不同的业务处理，如果需要发送（询问）则调用`Dispatcher`。
+
+```scala
+def main(argStrings: Array[String]) {
+  Thread.setDefaultUncaughtExceptionHandler(new SparkUncaughtExceptionHandler(
+    exitOnUncaughtException = false))
+  Utils.initDaemon(log)
+  val conf = new SparkConf
+  val args = new MasterArguments(argStrings, conf)
+  /* 创建rpc环境 和 Endpoint(供Rpc调用)，在Spark中 Driver， Master ，Worker角色都有各自的Endpoint，相当于各自的Inbox */
+  val (rpcEnv, _, _) = startRpcEnvAndEndpoint(args.host, args.port, args.webUiPort, conf)
+  rpcEnv.awaitTermination()
+}
+```
+
+`Master`继承了`ThreadSafeRpcEndpoint`类，重写的`receive`方法用于接收`netty`提交的请求，这部分为`Master`服务启动的过程。
+
+```scala
+override def receive: PartialFunction[Any, Unit] = {
+  /* 在AppClient向master注册Application后才会触发master的schedule函数进行launchExecutors操作 */
+  case RegisterApplication(description, driver) =>
+  // TODO Prevent repeated registrations from some driver
+  if (state == RecoveryState.STANDBY) {
+    // ignore, don't send response
+  } else {
+    logInfo("Registering app " + description.name)
+    val app = createApplication(description, driver)
+    registerApplication(app)
+    logInfo("Registered app " + description.name + " with ID " + app.id)
+    persistenceEngine.addApplication(app)
+    driver.send(RegisteredApplication(app.id, self))
+    schedule()  /* todo: 用于调度Driver，具体的调度内容需要详细的看 */
+  }
+}
+```
+
+`RestSubmissionClient`提交的请求统一由`StandaloneRestServer#handleSubmit(String, SubmitRestProtocolMessage, HttpServletResponse)`统一进行处理，通过`case CreateSubmissionRequest`表达式匹配请求的类型，使用`DeployMessages.RequestSubmitDriver(driverDescription)`申请启动`Driver`。
+
+```scala
+// A server that responds to requests submitted by the [[RestSubmissionClient]].
+// This is intended to be embedded in the standalone Master and used in cluster mode only.
+protected override def handleSubmit(
+  requestMessageJson: String,
+  requestMessage: SubmitRestProtocolMessage,
+  responseServlet: HttpServletResponse): SubmitRestProtocolResponse = {
+  requestMessage match {
+    case submitRequest: CreateSubmissionRequest =>
+    /* 构建好所有的参数DriverDescription，用于向Driver端发送请求 */
+    val driverDescription = buildDriverDescription(submitRequest)
+    /* Driver构建完成后正式向Master发起一个请求，向master请求资源 */
+    val response = masterEndpoint.askSync[DeployMessages.SubmitDriverResponse](
+      DeployMessages.RequestSubmitDriver(driverDescription))
+    val submitResponse = new CreateSubmissionResponse
+    submitResponse.serverSparkVersion = sparkVersion
+    submitResponse.message = response.message
+    submitResponse.success = response.success
+    submitResponse.submissionId = response.driverId.orNull
+    val unknownFields = findUnknownFields(requestMessageJson, requestMessage)
+    if (unknownFields.nonEmpty) {
+      // If there are fields that the server does not know about, warn the client
+      submitResponse.unknownFields = unknownFields
+    }
+    submitResponse
+  }
+}
+```
+
+在`Master#receiveAndReply()`方法中用`createDriver(description)`对`DriverDescription`再进行一次封装，同时通过`schedule()`进行资源调度到`Worker`上（在`schedule`方法中调用`launchDriver`的方法，会向`Worker`发送一个`LaunchDriver`类型请求），最后`reply`进行`rest`请求响应。
+
+```scala
+override def receiveAndReply(context: RpcCallContext): PartialFunction[Any, Unit] = {
+  case RequestSubmitDriver(description) =>
+  if (state != RecoveryState.ALIVE) {
+    val msg = s"${Utils.BACKUP_STANDALONE_MASTER_PREFIX}: $state. " +
+    "Can only accept driver submissions in ALIVE state."
+    context.reply(SubmitDriverResponse(self, false, None, msg))
+  } else {
+    logInfo("Driver submitted " + description.command.mainClass)
+    val driver = createDriver(description)
+    persistenceEngine.addDriver(driver)
+    waitingDrivers += driver
+    drivers.add(driver)
+    schedule()  // 执行调度的逻辑schedule()
+
+    // TODO: It might be good to instead have the submission client poll the master to determine
+    //       the current status of the driver. For now it's simply "fire and forget".
+    context.reply(SubmitDriverResponse(self, true, Some(driver.id),
+                                       s"Driver successfully submitted as ${driver.id}"))
+  }
+}
+```
+
+将视角转到`Worker#receive()`方法中，通过模式匹配`case LaunchDriver(driverId, driverDesc)`进入如下代码，然后调用`driver.start()`启动程序。
+
+```scala
+case LaunchDriver(driverId, driverDesc) =>
+	logInfo(s"Asked to launch driver $driverId")
+  /*
+   * 在RestSubmissionClient向StandaloneRestServer提交launchDriver请求后，实际上在StandaloneRestServer进行了一层封装
+   * DriverWrapper. 所以，在此处启动的类是DriverWrapper 而不是用户程序本身，在该main方法里，主要是用自定义类加载器加载了用户的
+   * main方法，然后开始启动用户程序 初始化sparkContext等;
+   */
+   val driver = new DriverRunner(
+      conf,
+      driverId,
+      workDir,
+      sparkHome,
+      /*
+       * 此处的Command就是在StandaloneRestServer封装好的
+       * val command = new Command("org.apache.spark.deploy.worker.DriverWrapper", Seq("{{WORK_URL}}",
+       *  "{{USER_JAR}}", mainClass)) ++ appArgs,   // args to the DriverWrapper
+       */
+      driverDesc.copy(command = Worker.maybeUpdateSSLSettings(driverDesc.command, conf)),
+      self,
+      workerUri,
+      securityMgr)
+   drivers(driverId) = driver
+   driver.start()
+   coresUsed += driverDesc.cores
+   memoryUsed += driverDesc.mem
+```
+
+进入`driver.start()`方法，应用会创建`Driver`所需要的工作目录，同时`download`用户自定义的`jar`包 然后开始运行`Driver`。
+
+```scala
+/** Starts a thread to run and manage the driver. */
+private[worker] def start() = {
+  new Thread("DriverRunner for " + driverId) {
+    override def run() {
+        // prepare driver jars and run driver, 下载用户自定义的jar包, buildProcessBuilder该方法有两个默认值的备用参数，主要是准备程序运行的环境 (但并不包含app所在的jar)
+        val exitCode = prepareAndRunDriver()
+        // set final state depending on if forcibly killed and process exit code
+        finalState = if (exitCode == 0) {
+          Some(DriverState.FINISHED)
+        } else if (killed) {
+          Some(DriverState.KILLED)
+        } else {
+          Some(DriverState.FAILED)
+        }
+      // notify worker of final driver state, possible exception
+      worker.send(DriverStateChanged(driverId, finalState.get, finalException))
+    }
+  }.start()
+}
+```
+
+进一步进入到`prepareAndRunDriver()`方法，程序使用`CommandUtils.buildProcessBuilder()`结合`command`所要运行的环境，重新构建一个命令。例如: 本地环境变量、系统`classpath`, 替换掉传递过来的占位符。
+
+```scala
+private[worker] def prepareAndRunDriver(): Int = {
+  val driverDir = createWorkingDirectory()
+  val localJarFilename = downloadUserJar(driverDir)  // 下载用户自定义的jar包
+  def substituteVariables(argument: String): String = argument match {
+    case "{{WORKER_URL}}" => workerUrl
+    case "{{USER_JAR}}" => localJarFilename
+    case other => other
+  }
+  // TODO: If we add ability to submit multiple jars they should also be added here
+  /* buildProcessBuilder该方法有两个默认值的备用参数，主要是准备程序运行的环境 (但并不包含app所在的jar) */
+  val builder = CommandUtils.buildProcessBuilder(driverDesc.command, securityManager,
+                                                 driverDesc.mem, sparkHome.getAbsolutePath, substituteVariables)
+  runDriver(builder, driverDir, driverDesc.supervise)
+}
+```
+
+进入`CommandUtils#buildLocalCommand`方法，`-cp`参数是在`buildCommandSeq(Command, Int, String)`中构建。
+
+```scala
+  /**
+   * Build a command based on the given one, taking into account the local environment
+   * of where this command is expected to run, substitute any placeholders, and append
+   * any extra class paths.
+   */
+  private def buildLocalCommand(
+      command: Command,
+      securityMgr: SecurityManager,
+      substituteArguments: String => String,
+      classPath: Seq[String] = Seq.empty,
+      env: Map[String, String]): Command = {
+    val libraryPathName = Utils.libraryPathEnvName   // 返回系统的path，也就是一些
+    val libraryPathEntries = command.libraryPathEntries
+    val cmdLibraryPath = command.environment.get(libraryPathName)
+
+    var newEnvironment = if (libraryPathEntries.nonEmpty && libraryPathName.nonEmpty) {
+      val libraryPaths = libraryPathEntries ++ cmdLibraryPath ++ env.get(libraryPathName)
+      command.environment + ((libraryPathName, libraryPaths.mkString(File.pathSeparator)))
+    } else {
+      /*
+       * RestSubmissionClient发送过来的环境变量只有 SPARK_和MESOS_ 开头的环境变量，也即是对于driver端System.getenv()系统环境变量获取
+       * 的值. 如spark-env初始化的 SPARK_ 开头的环境变量，在提交的时候已经创建好了;
+       */
+      command.environment
+    }
+    Command(
+      /*
+       * 对于driver并不是用户命令的入口，而是一个封装类org.apache.spark.deploy.DriverWrapper, 在封装类里面进一步解析
+       *  对于executor是这个org.apache.spark.executor.CoarseGrainedExecutorBackend类
+       */
+      command.mainClass,
+      command.arguments.map(substituteArguments),
+      newEnvironment,
+      command.classPathEntries ++ classPath,
+      Seq.empty, // library path already captured in environment variable
+      // filter out auth secret from java options
+      command.javaOpts.filterNot(_.startsWith("-D" + SecurityManager.SPARK_AUTH_SECRET_CONF)))  // spark.jars在此处
+  }
+```
+
+在`StandaloneRestServer#buildDriverDescription()`方法里指明如何构建`Command`类型，用命令行执行的是`org.apache.spark.deploy.worker.DriverWrapper`包装类。
+
+```scala
+/* 直接执行的是这个封装类，通过自定义urlClassLoader指定classpath的方式加载用户的jar然后通过反射执行 */
+val command = new Command(
+   "org.apache.spark.deploy.worker.DriverWrapper",
+   Seq("{{WORKER_URL}}", "{{USER_JAR}}", mainClass) ++ appArgs, // args to the DriverWrapper
+   environmentVariables, extraClassPath, extraLibraryPath, javaOpts)  // 也即是此时spark.jars也即--jars传来的参数在javaOpts里面
+```
+
+进入到`DriverManager#main(args: Array[String])`方法，通过自定义的`classLoader`加载`jar`包，根据`mainClass`通过反射执行其`main()`方法，触发用户程序的执行。
+
+```scala
+def main(args: Array[String]) {
+  case workerUrl :: userJar :: mainClass :: extraArgs =>
+  	    val conf = new SparkConf()
+        val host: String = Utils.localHostName()
+        val port: Int = sys.props.getOrElse("spark.driver.port", "0").toInt
+        val rpcEnv = RpcEnv.create("Driver", host, port, conf, new SecurityManager(conf))
+        logInfo(s"Driver address: ${rpcEnv.address}")
+        rpcEnv.setupEndpoint("workerWatcher", new WorkerWatcher(rpcEnv, workerUrl))
+
+        val currentLoader = Thread.currentThread.getContextClassLoader
+        val userJarUrl = new File(userJar).toURI().toURL()
+        val loader =
+          if (sys.props.getOrElse("spark.driver.userClassPathFirst", "false").toBoolean) {
+            new ChildFirstURLClassLoader(Array(userJarUrl), currentLoader)
+          } else {
+            new MutableURLClassLoader(Array(userJarUrl), currentLoader)
+          }
+        /*
+         * 此时通过反射从userJarURL获取用户入口代码，调用用户的入口程序，然后执行. 在初始化SparkContext的时候会把spark.jars
+         * 所指定的所有jar都添加到集群中 为将来执行tasks准备好依赖环境, return c.newInstance()
+         */
+        Thread.currentThread.setContextClassLoader(loader)
+        setupDependencies(loader, userJar)
+
+        // Delegate to supplied main class
+        val clazz = Utils.classForName(mainClass)
+        val mainMethod = clazz.getMethod("main", classOf[Array[String]])
+        mainMethod.invoke(null, extraArgs.toArray[String])
+        rpcEnv.shutdown()
+}
+```
+
+
 
 
 
