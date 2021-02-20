@@ -47,7 +47,7 @@ while IFS= read -d '' -r ARG; do
 done < <(build_command "$@")
 ```
 
-参数传递到``org.apache.spark.launcher.Main#main(String[] argsArray)`方法用于触发运行`spark`应用程序，当`class`为`SparkSubmit`时，从`args`中解析校验请求参数，校验参数、加载`classpath`中的`jar`、向`executor`申请的资源来构建`bash`脚本，触发`spark`执行应用程序。
+参数传递到`org.apache.spark.launcher.Main#main(String[] argsArray)`方法用于触发运行`spark`应用程序，当`class`为`SparkSubmit`时，从`args`中解析校验请求参数，校验参数、加载`classpath`中的`jar`、向`executor`申请的资源来构建`bash`脚本，触发`spark`执行应用程序。
 
 ```scala
 public static void main(String[] argsArray) throws Exception {  
@@ -193,7 +193,7 @@ def run(
 }
 ```
 
-在``RestSubmissionClientApp#createSubmission()`方法中验证所有`masters`地址，开始构建`submitUrl`然后逐个向`master`发送请求。在每次发送请求时都会验证`master`是否可用，当不可用时会将其添加到`lostMasters`列表中。至此，在`standalone`模式下提交一个`spark application`的流程就到此为止。
+在`RestSubmissionClientApp#createSubmission()`方法中验证所有`masters`地址，开始构建`submitUrl`然后逐个向`master`发送请求。在每次发送请求时都会验证`master`是否可用，当不可用时会将其添加到`lostMasters`列表中。至此，在`standalone`模式下提交一个`spark application`的流程就到此为止。
 
 ```scala
 /**
@@ -492,7 +492,48 @@ def main(args: Array[String]) {
 }
 ```
 
+现在`Driver`已经启动了，接下来看应用如何启动`executor`和`task`的流程，`Executor`的启动从`SparkContext#createTaskScheduler(SparkContext, String, String)`方法，方法体中会初始化`StandaloneSchedulerBackend`类。`SparkContext`准备完成后会调用`_taskScheduler.start()`方法启动`StandaloneSchedulerBackend`方法：
 
+```scala
+// start TaskScheduler after taskScheduler sets DAGScheduler reference in DAGScheduler's
+// constructor (YarnSchedule)
+_taskScheduler.start()
+
+private def createTaskScheduler(
+  sc: SparkContext,
+  master: String,
+  deployMode: String): (SchedulerBackend, TaskScheduler) = {
+    case SPARK_REGEX(sparkUrl) =>
+    val scheduler = new TaskSchedulerImpl(sc) /* standalone模式下执行任务调度器executor */
+    val masterUrls = sparkUrl.split(",").map("spark://" + _)
+    /* 重点, 用户程序向master注册, executor申请都是由该函数完成的. start是在TaskSchedulerImpl中的start函数里启动的 */
+    val backend = new StandaloneSchedulerBackend(scheduler, sc, masterUrls)
+    scheduler.initialize(backend)
+    (backend, scheduler)
+}
+```
+
+进入`StandaloneSchedulerBackend#start()`方法，用`CoarseGrainedExecutorBackend`构建`command`命令，然后构建`ApplicationDescription`对象，将其传入`appClient`并向`Master`发起应用注册的请求，`Master`端收到请求后会重新运行`launchExecutor`的方法。
+
+```scala
+override def start() {
+  super.start() 
+    // Start executors with a few necessary configs for registering with the scheduler
+    /* 只获取了Executor启动时用到的配置，不包含--jars传递的值 */
+    val sparkJavaOpts = Utils.sparkJavaOpts(conf, SparkConf.isExecutorStartupConf)
+    val javaOpts = sparkJavaOpts ++ extraJavaOpts
+    val command = Command("org.apache.spark.executor.CoarseGrainedExecutorBackend",
+      args, sc.executorEnvs, classPathEntries ++ testingClassPath, libraryPathEntries, javaOpts)
+    // 重点关注两个参数 spark.executor.extraLibraryPath spark.driver.extraLibraryPath
+    val webUrl = sc.ui.map(_.webUrl).getOrElse("")
+    val coresPerExecutor = conf.getOption("spark.executor.cores").map(_.toInt)
+	
+  	val appDesc = ApplicationDescription(sc.appName, maxCores, sc.executorMemory, command,
+      webUrl, sc.eventLogDir, sc.eventLogCodec, coresPerExecutor, initialExecutorLimit)
+    client = new StandaloneAppClient(sc.env.rpcEnv, masters, appDesc, this, conf)
+    client.start()
+}
+```
 
 
 
