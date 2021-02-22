@@ -513,7 +513,7 @@ private def createTaskScheduler(
 }
 ```
 
-进入`StandaloneSchedulerBackend#start()`方法，用`CoarseGrainedExecutorBackend`构建`command`命令，然后构建`ApplicationDescription`对象，将其传入`appClient`并向`Master`发起应用注册的请求，`Master`端收到请求后会重新运行`launchExecutor`的方法。
+进入`StandaloneSchedulerBackend#start()`方法，用`CoarseGrainedExecutorBackend`构建`command`命令，然后构建`ApplicationDescription`对象，将其传入`appClient`并向`Master`发起应用注册的请求`StandaloneAppClient#tryRegisterAllMasters()`方法中发送`RegisterApplication(appDescription, self)`，`Master`端收到请求后会重新运行`schedule()`的方法。
 
 ```scala
 override def start() {
@@ -535,5 +535,113 @@ override def start() {
 }
 ```
 
+进入`Worker#receive()`方法，根据`case`匹配到`LaunchExecutor`的请求，构建`ExecutorRunner`对象并调用其`start()`方法。
 
+```scala
+case LaunchExecutor(masterUrl, appId, execId, appDesc, cores_, memory_) =>
+	if (masterUrl != activeMasterUrl) {
+     logWarning("Invalid Master (" + masterUrl + ") attempted to launch executor.")
+  } else {
+    logInfo("Asked to launch executor %s/%d for %s".format(appId, execId, appDesc.name))
+    val manager = new ExecutorRunner(
+      appId,
+      execId,
+      appDesc.copy(command = Worker.maybeUpdateSSLSettings(appDesc.command, conf)),
+      cores_,
+      memory_,
+      self,
+      workerId,
+      host,
+      webUi.boundPort,
+      publicAddress,
+      sparkHome,
+      executorDir,
+      workerUri,
+      conf,
+      appLocalDirs, ExecutorState.RUNNING)
+    executors(appId + "/" + execId) = manager
+    manager.start()
+    coresUsed += cores_
+    memoryUsed += memory_
+    sendToMaster(ExecutorStateChanged(appId, execId, manager.state, None, None))
+  }
+```
+
+进入`ExecutorRunner#start()`方法，首先创建了一个`worker`线程用于执行任务，要执行的方法为`fetchAndRunExecutor()`。在方法中通过`CommandUtils.buildProcessBuilder()`创建进程，然后设置执行路径、环境变量以及`spark UI`相关内容，然后启动进程（`process`执行类为`CoarseGrainedExecutorBackend`）。
+
+```scala
+/**
+ * Download and run the executor described in our ApplicationDescription
+ */
+private def fetchAndRunExecutor() {
+	// Launch the process
+  val subsOpts = appDesc.command.javaOpts.map {
+    Utils.substituteAppNExecIds(_, appId, execId.toString)
+  }
+  val subsCommand = appDesc.command.copy(javaOpts = subsOpts)
+  val builder = CommandUtils.buildProcessBuilder(subsCommand, new SecurityManager(conf),
+                                                 memory, sparkHome.getAbsolutePath, substituteVariables)
+  val command = builder.command()
+  val formattedCommand = command.asScala.mkString("\"", "\" \"", "\"")
+  logInfo(s"Launch command: $formattedCommand")
+  // 执行构建完成的ProcessBuilder
+  process = builder.start()
+  val header = "Spark Executor Command: %s\n%s\n\n".format(
+  formattedCommand, "=" * 40)
+  // Wait for it to exit; executor may exit with code 0 (when driver instructs it to shutdown)
+  // or with nonzero exit code
+  val exitCode = process.waitFor()
+  state = ExecutorState.EXITED
+  val message = "Command exited with code " + exitCode
+  worker.send(ExecutorStateChanged(appId, execId, state, Some(message), Some(exitCode)))
+}
+```
+
+在`CoarseGrainedExecutorBackend#receive()`方法中接收`case LaunchTask(data)`的请求，当`executor`初始化好之后执行`executor.launchTask(this, taskDesc)`方法。
+
+```scala
+override def receive: PartialFunction[Any, Unit] = {
+  case LaunchTask(data) =>
+  if (executor == null) {
+    exitExecutor(1, "Received LaunchTask command but executor was null")
+  } else {
+    val taskDesc = TaskDescription.decode(data.value)
+    logInfo("Got assigned task " + taskDesc.taskId)
+    executor.launchTask(this, taskDesc)
+  }
+}
+```
+
+进入`TaskRunner#run()`方法，设置`TaskMemoryManager`、序列化`jar`文件、初始化各种`Metrics`统计信息，然后通过`task.run()`的任务就正常执行了。至此，从使用`spark-submit.sh`脚本提交用户`application`在`standalone`模式下的流程就先分析完成。
+
+```scala
+override def run(): Unit = {
+  val taskMemoryManager = new TaskMemoryManager(env.memoryManager, taskId)
+  val deserializeStartTime = System.currentTimeMillis()
+  val deserializeStartCpuTime = if (threadMXBean.isCurrentThreadCpuTimeSupported) {
+    threadMXBean.getCurrentThreadCpuTime
+  } else 0L
+  /*
+   * 类加载器设置的是url类加载器, 而其父类加载器是系统类加载器. currentJars是以来的uri, 用户在调用
+   * updateDependencies将依赖添加至此
+   */
+  Thread.currentThread.setContextClassLoader(replClassLoader)
+  val ser = env.closureSerializer.newInstance()
+  logInfo(s"Running $taskName (TID $taskId)")
+  // Run the actual task and measure its runtime.
+  taskStartTime = System.currentTimeMillis()
+  taskStartCpu = if (threadMXBean.isCurrentThreadCpuTimeSupported) {
+    threadMXBean.getCurrentThreadCpuTime
+  } else 0L
+  var threwException = true
+  val value = Utils.tryWithSafeFinally {
+    val res = task.run(
+      taskAttemptId = taskId,
+      attemptNumber = taskDescription.attemptNumber,
+      metricsSystem = env.metricsSystem)
+    threwException = false
+    res
+  } 
+}
+```
 
