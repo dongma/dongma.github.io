@@ -42,10 +42,6 @@ private[deploy] def prepareSubmitEnvironment(
         logWarning(s"Master ${args.master} is deprecated since 2.0." +
           " Please use master \"yarn\" with specified deploy mode instead.")
         YARN
-      case m if m.startsWith("spark") => STANDALONE
-      case m if m.startsWith("mesos") => MESOS
-      case m if m.startsWith("k8s") => KUBERNETES
-      case m if m.startsWith("local") => LOCAL
     }	 
     if (deployMode == CLIENT) {
     /* 在client模式下 用户程序直接在submit内通过反射机制执行，此时用户自己打的jar和--jars指定的jar都会被加载到classpath中  */
@@ -57,10 +53,62 @@ private[deploy] def prepareSubmitEnvironment(
     }
     // In yarn-cluster mode, use yarn.Client as a wrapper around the user class
     if (isYarnCluster) {
-      /* YARN_CLUSTER_SUBMIT_CLASS为org.apache.spark.deploy.yarn.YarnClusterApplication */
+      /* YARN_CLUSTER_SUBMIT_CLASS在cluster模式下为org.apache.spark.deploy.yarn.YarnClusterApplication */
       childMainClass = YARN_CLUSTER_SUBMIT_CLASS
     } 
     (childArgs, childClasspath, sparkConf, childMainClass) 
 }
 ```
 
+`submit()`需要的环境准备好之后，通过`mainClass`构建`spark`应用，由于目前分析在`yarn client`模式下的启动，`mainClass`并不是`SparkApplication`的实例。因而，`app`类型为`JavaMainApplication`。
+
+```
+val app: SparkApplication = if (classOf[SparkApplication].isAssignableFrom(mainClass)) {
+      mainClass.newInstance().asInstanceOf[SparkApplication]
+} else {
+  // SPARK-4170
+  if (classOf[scala.App].isAssignableFrom(mainClass)) {
+  logWarning("Subclasses of scala.App may not work correctly. Use a main() method instead.")
+  }
+  new JavaMainApplication(mainClass)
+}
+/* standalone模式在 SparkSubmit#prepareSubmitEnvironment(args)中将childMainClass设置为RestSubmissionClient */
+app.start(childArgs.toArray, sparkConf)
+```
+
+在`start()`方法中会通过反射获取得到`main`方法，然后进行调用执行用户`jar`包中的代码。进入用户程序（`main`方法）之后，存在两个重要的类`SparkConf`和`SparkContext`，根据`config`配置信息实例化`context`上下文。
+
+```scala
+override def start(args: Array[String], conf: SparkConf): Unit = {
+  val mainMethod = klass.getMethod("main", new Array[String](0).getClass)
+  if (!Modifier.isStatic(mainMethod.getModifiers)) {
+    throw new IllegalStateException("The main method in the given main class must be static")
+  }
+  val sysProps = conf.getAll.toMap
+  sysProps.foreach { case (k, v) =>
+    sys.props(k) = v
+  }
+  mainMethod.invoke(null, args)
+}
+/* spark application中使用sparkConf和sparkContext加载环境相关配置 */
+val config = new SparkConf().setAppName("spark-app")
+	.set("spark.app.id", "spark-mongo-connector")
+val sparkContext = new SparkContext(config)
+```
+
+在`SparkContext#createTaskScheduler(SparkContext, String, String)`方法中会根据`master`确定`scheduler`和`backend`。由于`master`为`yarn`，在`getClusterManager(String)`中确定`cm`的类型为`YarnClusterManager`。在`yarn-client`模式下调用`createTaskScheduler()`和`createSchedulerBackend()`通过`masterUrl`和`deployMode`可得 `scheduler`为`YarnScheduler`、`backend`为`YarnClientSchedulerBackend`。
+
+```scala
+/* 当masterUrl为外部资源时 (Yarn、Mesos、K8s)，走此处的逻辑: (yarn)cluster模式走YarnClusterScheduler、
+        (yarn)client走YarnScheduler用于资源调度 */
+case masterUrl =>
+  val cm = getClusterManager(masterUrl) match {
+    case Some(clusterMgr) => clusterMgr
+    case None => throw new SparkException("Could not parse Master URL: '" + master + "'")
+  }
+  val scheduler = cm.createTaskScheduler(sc, masterUrl)
+  val backend = cm.createSchedulerBackend(sc, masterUrl, scheduler)
+  cm.initialize(scheduler, backend)
+```
+
+进入`YarnClientSchedulerBackend#start()`方法，
