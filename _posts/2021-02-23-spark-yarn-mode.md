@@ -62,7 +62,7 @@ private[deploy] def prepareSubmitEnvironment(
 
 `submit()`需要的环境准备好之后，通过`mainClass`构建`spark`应用，由于目前分析在`yarn client`模式下的启动，`mainClass`并不是`SparkApplication`的实例。因而，`app`类型为`JavaMainApplication`。
 
-```
+```scala
 val app: SparkApplication = if (classOf[SparkApplication].isAssignableFrom(mainClass)) {
       mainClass.newInstance().asInstanceOf[SparkApplication]
 } else {
@@ -111,4 +111,192 @@ case masterUrl =>
   cm.initialize(scheduler, backend)
 ```
 
-进入`YarnClientSchedulerBackend#start()`方法，
+进入`YarnClientSchedulerBackend#start()`方法，创建`client`对象去提交任务，然后调用`client.submitApplication()`使用`AM`向`ResourceManager`申请资源。在`super.start()`中会启动`CoarseGrainedSchedulerBackend`，等待`app`的启动成功。
+
+```scala
+override def start() {
+  /* 动态申请资源的时候才会调用 SchedulerBackendUtils#getInitialTargetExecutorNumber */
+  totalExpectedExecutors = SchedulerBackendUtils.getInitialTargetExecutorNumber(conf)
+  client = new Client(args, conf)
+  /* 将Application提交之后  # 可看ApplicationMaster#main()的启动 */
+  bindToYarn(client.submitApplication(), None)
+  // SPARK-8687: Ensure all necessary properties have already been set before
+  // we initialize our driver scheduler backend, which serves these properties
+  // to the executors
+  /* 调用YarnSchedulerBackend的父类CoarseGrainedSchedulerBackend#start()方法，在start()方法里实现自己 */
+  super.start()
+  waitForApplication()
+}
+```
+
+进一步看`client.submitApplication()`提交应用给`AppMaster`前，如何初始化`ContainerContext`运行环境、`java opts`和运行`AM`的指令，进入`createContainerLaunchContext()`方法，`client`模式下`amClass`为`org.apache.spark.deploy.yarn.ExecutorLauncher`。在`yarn client`模式下，都是有`appMaster`向`resourceManager`申请`--num-executor NUM`参数指定的数目。
+
+```scala
+/**
+ * Set up a ContainerLaunchContext to launch our ApplicationMaster container.
+ * This sets up the launch environment, java options, and the command for launching the AM.
+ */
+private def createContainerLaunchContext(newAppResponse: GetNewApplicationResponse) {
+  // 设置环境变量及spark-java-opts
+  val launchEnv = setupLaunchEnv(appStagingDirPath, pySparkArchives)
+  /*
+   * 这个函数的主要作用是将用户自己打的jar包(--jars指定的jar发送到分布式缓存中去)，并设置了spark.yarn.user.jar
+   * 和spark.yarn.secondary.jars这两个参数, 然后这两个参数会被封装程 --user-class-path 传递给
+   * executor使用
+   */
+  val localResources = prepareLocalResources(appStagingDirPath, pySparkArchives)
+  val amContainer = Records.newRecord(classOf[ContainerLaunchContext])
+  amContainer.setLocalResources(localResources.asJava)
+  amContainer.setEnvironment(launchEnv.asJava)
+  // Add Xmx for AM memory
+  javaOpts += "-Xmx" + amMemory + "m"
+  val tmpDir = new Path(Environment.PWD.$$(), YarnConfiguration.DEFAULT_CONTAINER_TEMP_DIR)
+  javaOpts += "-Djava.io.tmpdir=" + tmpDir
+  /* 判断是否在cluster集群环境来确定AMclass, client模式下为ExecutorLauncher, 通过AMclass及一些参数构建command 进而构建amContainer */
+  val amClass =
+  if (isClusterMode) {
+    Utils.classForName("org.apache.spark.deploy.yarn.ApplicationMaster").getName
+  } else {
+    Utils.classForName("org.apache.spark.deploy.yarn.ExecutorLauncher").getName
+  }
+  amContainer
+}
+```
+
+在`super.start()`需要重点看一下`YarnSchedulerBackend`的父类`CoarseGrainedSchedulerBackend`的`start()`方法，方法体内创建了一个`driverEndpoint`的`RPC`客户端。在`YarnSchedulerBackend`类中覆盖了`createDriverEndpointRef()`方法，用子类`YarnDriverEndpoint`替代`DriverEndpoint`并重写了其`onDisconnected()`方法（是由于协议的不同）。
+
+```scala
+/* YarnSchedulerBackend启动时实例化，负责根ApplicationMaster进行通信 */
+private val yarnSchedulerEndpoint = new YarnSchedulerEndpoint(rpcEnv)
+override def start() {
+	// TODO (prashant) send conf instead of properties
+	driverEndpoint = createDriverEndpointRef(properties)
+}
+```
+
+`yarn-client`代码分析完之后，进入`ApplicationMaster#main(Array[String])`，在上文`client#createContainerLaunchContext()`时，指定`amClass`为`org.apache.spark.deploy.yarn.ExecutorLauncher`（`main`方法中封装了`ApplicationMaster`），最终调用`runExecutorLauncher()`运行`executor`。
+
+```scala
+private def runExecutorLauncher(): Unit = {
+  val hostname = Utils.localHostName
+  val amCores = sparkConf.get(AM_CORES)
+  rpcEnv = RpcEnv.create("sparkYarnAM", hostname, hostname, -1, sparkConf, securityMgr,
+                         amCores, true)
+  // The client-mode AM doesn't listen for incoming connections, so report an invalid port.
+  registerAM(hostname, -1, sparkConf, sparkConf.getOption("spark.driver.appUIAddress"))
+  // The driver should be up and listening, so unlike cluster mode, just try to connect to it
+  // with no waiting or retrying.
+  val (driverHost, driverPort) = Utils.parseHostPort(args.userArgs(0))
+  val driverRef = rpcEnv.setupEndpointRef(
+    RpcAddress(driverHost, driverPort),
+    YarnSchedulerBackend.ENDPOINT_NAME)
+  addAmIpFilter(Some(driverRef))
+  /* 向resourceManager申请根启动--num-executor相同的资源 */
+  createAllocator(driverRef, sparkConf)
+  // In client mode the actor will stop the reporter thread.
+  reporterThread.join()
+}
+```
+
+在`appMaster#createAllocator()`会进入到`allocator#allocateResources()`申请资源，接着进入`handleAllocatedContainers(Seq[Container])`方法。在`runAllocatedContainers()`中在已经申请到的`container`中运行`executor`。
+
+```scala
+/**
+ * Launches executors in the allocated containers.
+ */
+private def runAllocatedContainers(containersToUse: ArrayBuffer[Container]): Unit = {
+  new ExecutorRunnable(
+    Some(container), conf, sparkConf, driverUrl, executorId, executorHostname,executorMemory,
+    executorCores, appAttemptId.getApplicationId.toString, securityMgr, localResources
+  ).run()
+}
+```
+
+在`ExecutorRunnable#startContainer()`中会设置本地相关环境变量，然后`nmClient`会启动`container`。
+
+```scala
+def startContainer(): java.util.Map[String, ByteBuffer] = {
+  /* 此处设置spark.executor.extraClassPath为系统环境变量 */
+  ctx.setLocalResources(localResources.asJava)
+  // Send the start request to the ContainerManager
+  try {
+    nmClient.startContainer(container.get, ctx)
+  } catch {
+    case ex: Exception =>
+    throw new SparkException(s"Exception while starting container ${container.get.getId}" +
+                             s" on host $hostname", ex)
+  }
+}
+```
+
+在`CoarseGrainedExecutorBackend#main(Array[String])`启动时会执行`run(driverUrl, executorId, hostname, cores, appId, workerUrl, userClassPath)`的方法。先创建`env`然后根据`env`使用`CoarseGrainedExecutorBackend`作为`executor`创建`rpc`。
+
+```scala
+/* 创建env主要用与Rpc提交相关的请求 */
+val env = SparkEnv.createExecutorEnv(
+driverConf, executorId, hostname, cores, cfg.ioEncryptionKey, isLocal = false)
+
+env.rpcEnv.setupEndpoint("Executor", new CoarseGrainedExecutorBackend(
+	env.rpcEnv, driverUrl, executorId, hostname, cores, userClassPath, env))
+workerUrl.foreach { url =>
+	env.rpcEnv.setupEndpoint("WorkerWatcher", new WorkerWatcher(env.rpcEnv, url))
+}
+env.rpcEnv.awaitTermination()
+```
+
+`rpc`在`onStart()`的时候会发送`RegisterExecutor`的请求，用于注册`executor`的相关信息。
+
+```scala
+override def onStart() {
+  logInfo("Connecting to driver: " + driverUrl)
+  rpcEnv.asyncSetupEndpointRefByURI(driverUrl).flatMap { ref =>
+    // This is a very fast action so we can use "ThreadUtils.sameThread"
+    driver = Some(ref)
+    ref.ask[Boolean](RegisterExecutor(executorId, self, hostname, cores, extractLogUrls))
+  }(ThreadUtils.sameThread).onComplete {
+    // This is a very fast action so we can use "ThreadUtils.sameThread"
+    case Success(msg) =>
+    // Always receive `true`. Just ignore it
+    case Failure(e) =>
+    exitExecutor(1, s"Cannot register with driver: $driverUrl", e, notifyDriver = false)
+  }(ThreadUtils.sameThread)
+}
+```
+
+`Driver`端`CoarseGrainedSchedulerBackend#receiveAndReply(RpcCallContext)`在收到`executor`注册请求时，会`reply`一个已经注册成功的响应。
+
+```scala
+executorRef.send(RegisteredExecutor)
+// Note: some tests expect the reply to come after we put the executor in the map
+context.reply(true)
+listenerBus.post(
+SparkListenerExecutorAdded(System.currentTimeMillis(), executorId, data))
+```
+
+`executor`收到响应后会启动一个`exectuor`，接下来就是等待`Driver`发送过来要进行调度的任务（用`case LaunchTask`匹配请求）。`executor`执行`launchTask()`，创建`TaskRunner`任务运行的流程就与`standalone`模式相同，`yarn-client`模式下`spark`任务提交以及运行的流程就是这样。
+
+```scala
+override def receive: PartialFunction[Any, Unit] = {
+  /* Driver响应executor注册成功时接收的请求 */
+  case RegisteredExecutor =>
+    logInfo("Successfully registered with driver")
+    try {
+      executor = new Executor(executorId, hostname, env, userClassPath, isLocal = false)
+    } catch {
+      case NonFatal(e) =>
+      exitExecutor(1, "Unable to create executor due to " + e.getMessage, e)
+    } 
+  /* Driver发送过来要进行调度的任务 */
+  case LaunchTask(data) =>
+    if (executor == null) {
+      exitExecutor(1, "Received LaunchTask command but executor was null")
+    } else {
+      val taskDesc = TaskDescription.decode(data.value)
+      logInfo("Got assigned task " + taskDesc.taskId)
+      executor.launchTask(this, taskDesc)
+    }
+}
+```
+
+
+
