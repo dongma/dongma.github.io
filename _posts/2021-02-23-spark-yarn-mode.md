@@ -298,5 +298,30 @@ override def receive: PartialFunction[Any, Unit] = {
 }
 ```
 
+接下来分析`spark app`在`yarn cluster`模式下的启动流程，主要流程和`client`模式一样，都是从`SparkSubmit`开始分析，启动环境的差异在于`prepareSubmitEnvironment()`方法。在`cluster`模式下会设置`childMainClass`为`org.apache.spark.deploy.yarn.YarnClusterApplication`。
 
+```scala
+// In yarn-cluster mode, use yarn.Client as a wrapper around the user class
+if (isYarnCluster) {
+  childMainClass = YARN_CLUSTER_SUBMIT_CLASS
+  if (args.isPython) {
+     childArgs += ("--primary-py-file", args.primaryResource)
+     childArgs += ("--class", "org.apache.spark.deploy.PythonRunner")
+  } else if (args.isR) {
+     val mainFile = new Path(args.primaryResource).getName
+     childArgs += ("--primary-r-file", mainFile)
+     childArgs += ("--class", "org.apache.spark.deploy.RRunner")
+  } else {
+     if (args.primaryResource != SparkLauncher.NO_RESOURCE) {
+        childArgs += ("--jar", args.primaryResource)
+     }
+     childArgs += ("--class", args.mainClass)
+  }
+  if (args.childArgs != null) {
+     args.childArgs.foreach { arg => childArgs += ("--arg", arg) }
+  }
+}
+```
+
+在`sparkContext`创建`taskScheduler`时，会设置其`scheduler`为`YarnClusterScheduler`，`SchedulerBackend`为`YarnClusterSchedulerBackend`，作为`task`调度的容器与`client`模式是有差异的。
 
