@@ -116,11 +116,11 @@ public class ProducerClient {
 
 `kafka`社区决定采用`tcp`而不是`http`，能够利用`TCP` 本身提供的一些高级功能，比如多路复用请求以及同时轮询多个连接的能力，目前已知的`HTTP` 库在很多编程语言中都略显简陋。
 
-何时创建`TCP` 连接？目前我们的结论是这样的，`TCP` 连接是在创建 `KafkaProducer` 实例时建立的。`TCP` 连接还可能在两个地方被创建：一个是在更新元数据后，另一个是在消息发送时。
+何时创建`TCP` 连接？目前我们的结论是这样的，`TCP`连接是在创建`KafkaProducer` 实例时建立的。`TCP`连接还可能在两个地方被创建：一个是在更新元数据后，另一个是在消息发送时。
 
-何时关闭 `TCP `连接？`Producer` 端关闭`TCP`连接的方式有两种：一种是用户主动关闭，一种是 `Kafka` 自动关闭。
+何时关闭`TCP `连接？`Producer`端关闭`TCP`连接的方式有两种：一种是用户主动关闭，一种是`Kafka`自动关闭。
 
-开启`kafka`生产者消息幂等性、producer生产者启用事务需要在`producer`的`properties`中设置以下配置：
+开启`kafka`生产者消息幂等性、`producer`生产者启用事务需要在`producer`的`properties`中设置以下配置：
 
 ```java
 // 开启生产者消息的幂等性, 保证底层message消息只会发送一次(用空间换，msg会多传一个字段 用于去重)
@@ -129,9 +129,9 @@ kafkaProp.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
 kafkaProp.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, "kafka-transactional");
 ```
 
-`Consumer Group` 是 `Kafka` 提供的可扩展且具有容错性的消费者机制。既然是一个组，那么组内必然可以有多个消费者或消费者实例`（Consumer Instance）`，它们共享一个公共的 `ID`，这个 `ID` 被称为 `Group ID`。组内的所有消费者协调在一起来消费订阅主题`（Subscribed Topics）`的所有分区`（Partition）`。
+`Consumer Group`是`Kafka`提供的可扩展且具有容错性的消费者机制。既然是一个组，那么组内必然可以有多个消费者或消费者实例`Consumer Instance`，它们共享一个公共的 `ID`，这个 `ID` 被称为 `Group ID`。组内的所有消费者协调在一起来消费订阅主题`（Subscribed Topics）`的所有分区`（Partition）`。
 
-Rebalance 本质上是一种协议，规定了一个 Consumer Group 下的所有 Consumer 如何达成一致，来分配订阅 Topic 的每个分区。比如某个 Group 下有 20 个 Consumer 实例，它订阅了一个具有 100 个分区的 Topic。正常情况下，Kafka 平均会为每个 Consumer 分配 5 个分区。这个分配的过程就叫 Rebalance。
+Rebalance 本质上是一种协议，规定了一个Consumer Group下的所有Consumer如何达成一致，来分配订阅Topic的每个分区。比如某个Group下有20个Consumer 实例，它订阅了一个具有100个分区的Topic。正常情况下，Kafka平均会为每个Consumer分配5个分区。这个分配的过程就叫Rebalance。
 
 那么 `Consumer Group` 何时进行 `Rebalance `呢？`Rebalance` 的触发条件有 `3 `个。
 
@@ -140,4 +140,161 @@ Rebalance 本质上是一种协议，规定了一个 Consumer Group 下的所有
 2）订阅主题数发生变更。`Consumer Group` 可以使用正则表达式的方式订阅主题，比如 `consumer.subscribe(Pattern.compile("t.*c")) `就表明该 `Group` 订阅所有以字母` t `开头、字母 `c `结尾的主题。在 `Consumer Group `的运行过程中，你新创建了一个满足这样条件的主题，那么该` Group` 就会发生` Rebalance`。
 
 3）订阅主题的分区数发生变更。`Kafka` 当前只能允许增加一个主题的分区数。当分区数增加时，就会触发订阅该主题的所有 `Group` 开启 `Rebalance`。
+
+揭开`kafka`位移主题，`__consumer_offsets`在`Kafka`源码中有个更为正式的名字，叫位移主题，即`Offsets Topic`。但是，`ZooKeeper`其实并不适用于这种高频的写操作。位移主题的`key`中应该保存`3`部分内容：<`GroupId, `topic`名称, 分区号>。
+
+如果位移主题是`Kafka`自动创建的，那么该主题的分区数是`50（offsets.topic.num.partitions）`，副本数是`3（offsets.topic.replication.factor`）。`Kafka`提供了专门的后台线程定期地巡检待`compact`的主题，看看是否存在满足条件的可删除数据。这个后台线程叫`Log Cleaner`。
+
+```java
+    /*
+     * __consumer_offsets 为消费者消费的内部主题, 主要由于zookeeper并不适合高频的写操作
+     * 位移主题的 Key 中应该保存 3 部分内容：<GroupId, topic名称, 分区号>
+     */
+    public static void main(String[] args) {
+        // 通常来说，当 Kafka 集群中的第一个 Consumer 程序启动时，Kafka 会自动创建位移主题 (何时创建 __consumer_offsets)
+        Properties kafkaProp = new Properties();
+        kafkaProp.put("bootstrap.servers", "localhost:9092");
+        kafkaProp.put("group.id", "test");
+        /*
+         * Consumer 端有个参数叫 enable.auto.commit，如果值是 true，则 Consumer 在后台默默地为你定期提交位移，提交间隔由一个专属的参数
+         * auto.commit.interval.ms 来控制
+         */
+        kafkaProp.put("enable.auto.commit", "true");
+        kafkaProp.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        kafkaProp.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+
+        KafkaConsumer<String, String> consumer = new KafkaConsumer<String, String>(kafkaProp);
+        consumer.subscribe(Arrays.asList("foo", "bar"));
+        /*while (true) {
+            ConsumerRecords<String, String> records = consumer.poll(100);
+            for (ConsumerRecord record : records) {
+                System.out.printf("offset = %d, key = %s, value = %s%n", record.offset(), record.key(), record.value());
+            }
+        }*/
+
+        /* 手动提交offset的示例：
+         * (Compact 策略) 当__consumer_offsets 数据较大时，会使用 Compact 策略 (压实)，删除过期offsets; Log Cleaner后台启线程巡查
+         */
+        kafkaProp.put("enable.auto.commit", "false");
+        while (true) {
+            ConsumerRecords<String, String> records =
+                    consumer.poll(Duration.ofSeconds(1));
+//            process(records);
+            consumer.commitAsync((offsets, exception) -> {
+                if (null != exception) { /* handleException(exception); */ }
+            });
+        }
+        /*
+         * Consumer Group 如何确定为它服务的 Coordinator 在哪台 Broker 上呢？
+         * 1、计算group.id的hashcode； 2、hashcode与分区数取模求绝对值，得到分区号； 3、找出该分区的leader副本所在的broker，即coordinator
+         */
+    }
+```
+
+避免`consumer`发生`rebalance()`重平衡的策略，去除`2`类非必要的`rebalance`。在提交位移时给出的最佳实践，同步与异步提交结合的方式（最后一次为同步）。
+
+```java
+/*
+ * consumer避免rebalance的方法，2类非必要的rebalance：
+ *  第一类非必要 Rebalance 是因为未能及时发送心跳，导致 Consumer 被“踢出”Group 而引发的 （session.timeout.ms = 6s，
+ *      heartbeat.interval.ms = 2s，能够发送3次）
+ *  第二类非必要 Rebalance 是 Consumer 消费时间过长导致的 （存在重操作-写mongo max.poll.interval.ms）
+ */
+private void bestPractise(KafkaConsumer<String, String> consumer) {
+  try {
+    while (true) {
+      ConsumerRecords<String, String> records = consumer.poll(Duration.ofSeconds(1));
+      // process(records);  /* 处理消息，异步提交offsets内容 */
+      consumer.commitAsync();
+    }
+  } catch (Exception ex) {
+    // handleException(ex);  /* 处理异常的代码 */
+  } finally {
+    try { consumer.commitSync(); /* 最后一次提交使用同步阻塞式提交 */} finally { consumer.close();}
+  }
+}
+```
+
+另外一种每消费`100`条记录提交一次`offset`，将要提交的`offset`值保存在`OffsetAndMetadata`
+
+```java
+/*
+ * (consumer offsets消费者位移)下一条消息的位移
+ * 从用户的角度来说，位移提交分为自动提交和手动提交；从 Consumer 端的角度来说，位移提交分为同步提交和异步提交
+ */
+private void commitPer100(KafkaConsumer<String, String> consumer) {
+  Map<TopicPartition, OffsetAndMetadata> offsets = new HashMap<>(8);
+  int count = 0;
+  while (true) {
+    ConsumerRecords<String, String> records =
+      consumer.poll(Duration.ofSeconds(1));
+    for (ConsumerRecord record : records) {
+      // process(record); /* 处理消息 */
+      offsets.put(new TopicPartition(record.topic(), record.partition()),
+                  new OffsetAndMetadata(record.offset() + 1));
+      if (count % 100 == 0) {
+        consumer.commitAsync(offsets, null); /* 回调处理逻辑是null */
+      }
+      count++;
+    }
+  }
+}
+```
+
+`CommitFailedException`异常如何处理? `consumer`客户端在提交位移时出现了错误或异常，并且是不可恢复的严重异常。典型场景：当消息处理的总时间超过`max.poll.interval.ms`参数时，`kafka consumer`会抛出`CommitFailedException`。预防`CommitFailedException`异常`4`种方法，缩短单条消息处理时间、增加`consumer`端允许下游系统消费一批数据的最大时长、减少下游系统一次消费的消息总数、下游系统使用多线程加速消费。
+
+`java`多线程开发消费者实例，有两种方案：第一种一个`consumer`一个线程，从头到尾处理完所有的流程。第二种为单线程拉取`kafka`消息，然后通过线程池处理`kafka`中的消息。
+
+```java
+public class ConsumerRunner implements Runnable {
+    private final AtomicBoolean closed = new AtomicBoolean(false);
+    public ConsumerRunner(KafkaConsumer consumer) {
+        this.consumer = consumer;
+    }
+    private final KafkaConsumer<String, String> consumer;
+    @Override
+    public void run() {
+        try {
+            consumer.subscribe(Arrays.asList("topic"));
+            while (!closed.get()) {
+                consumer.poll(Duration.ofMillis(10000));
+                // 执行消息处理的逻辑
+            }
+        } catch (WakeupException ex) {
+            /* Ignore exception if closing */
+            if (!closed.get()) {
+                throw ex;
+            }
+        } finally {
+            consumer.close();
+        }
+    }
+    /* Shutdown hook which can be called from a separate thread */
+    public void shutdown() {
+        closed.set(true);
+        consumer.wakeup();
+    }
+}
+```
+
+第二种使用线程池的方式，单个`consumer`通过`poll(200)`消费`kafka`中数据，然后使用`thread-pool`对数据进行业务处理。
+
+```java
+public static void main(String[] args) {
+  /* 使用方案二，加速多线程消费消息, 根据kafka的broker配置进行构建 */
+  KafkaConsumer<String, String> consumer = null;
+  int workNum = 20;
+  ExecutorService executors = new ThreadPoolExecutor(workNum, workNum, 
+                                                     0L, TimeUnit.MILLISECONDS,
+                                                     new ArrayBlockingQueue<>(1000),
+                                                     new ThreadPoolExecutor.CallerRunsPolicy());
+  /* 消费模式代码, 单个kafkaConsumer负责拉消息，获取的消息通过threadpool执行 */
+  while (true) {
+    ConsumerRecords<String, String> records = consumer.poll(Duration.ofSeconds(1));
+    for (ConsumerRecord<String, String> record : records) {
+      // executors.submit(new Worker(record));  /* 对于consumer poll到的消息，使用threadpool分别执行 */
+    }
+  }
+}
+```
 
