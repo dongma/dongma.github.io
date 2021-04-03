@@ -2,8 +2,6 @@
 layout: post
 title: spark standalone模式启动源码分析
 ---
-## spark standalone模式启动源码分析
-
 > spark目前支持以standalone、Mesos、YARN、Kubernetes等方式部署，本文主要分析apache spark在standalone模式下资源的初始化、用户application的提交，在spark-submit脚本提交应用时，如何将--extraClassPath等参数传递给Driver等相关流程。
 
 从`spark-submit.sh`提交用户`app`开始进行分析，`--class` 为`jar`包中的`main`类，`/path/to/examples.jar`为用户自定义的`jar`包、`1000`为运行`SparkPi`所需要的参数（基于`spark 2.4.5`分析）。

@@ -45,7 +45,8 @@ body {
 }*/
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: "PT Sans", Helvetica, Arial, sans-serif;
+  /* font-family: "PT Sans", Helvetica, Arial, sans-serif; */
+  font-family: Merriweather,"Open Sans","Microsoft Jhenghei","Microsoft Yahei",sans-serif;
   font-weight: 400;
   color: #313131;
   letter-spacing: -.025rem;
@@ -74,6 +75,9 @@ h1, h2, h3, h4, h5, h6 {
 
 .container {
   max-width: 28rem;
+  color: #3a4145;
+  -moz-font-feature-settings: 'kern' 1;
+  -o-font-feature-settings: 'kern' 1;
 }
 @media (min-width: 38em) {
   .container {

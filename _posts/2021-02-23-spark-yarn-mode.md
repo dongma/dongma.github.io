@@ -2,8 +2,6 @@
 layout: post
 title: 分析spark在yarn-client和yarn-cluster模式下启动
 ---
-## spark在yarn-client和yarn-cluster模式下启动
-
 > 文章分析`spark`在`yarn-client`、`yarn-cluster`模式下启动的流程，`yarn`是`apache`开源的一个资源管理的组件。`JobTracker`在`yarn`中大致分为了三块：一部分是`ResourceManager`，负责`Scheduler`及`ApplicationsManager`；一部分是`ApplicationMaster`，负责`job`生命周期的管理；最后一部分是`JobHistoryServer`，负责日志的展示；
 
 先看一个`spark`官网上通过`yarn`提交用户应用程序的`spark-submit`脚本，从该脚本开始分析在`yarn`环境下执行的流程。
@@ -25,10 +23,8 @@ title: 分析spark在yarn-client和yarn-cluster模式下启动
 <!-- See additional modules enabled by profiles below -->
 <module>resource-managers/yarn</module>
 ```
-
-与`standalone`模式应用启动一样，`SparkSubmit#runMain(SparkSubmitArguments, Boolean)`是应用程序的入口。由于是在`yarn`环境下启动，在前期准备`submit`环境时会有差异，差异点在`prepareSubmitEnvironment(SparkSubmitArguments, Option[HadoopConfiguration])`方法，在方法中会依`args.master`、`args.deployMode`进行模式匹配，当`master`为`yarn`时，会将`childMainClass`设置为`org.apache.spark.deploy.yarn.YarnClusterApplication`作为资源调度的启动类。
-
 <!-- more -->
+与`standalone`模式应用启动一样，`SparkSubmit#runMain(SparkSubmitArguments, Boolean)`是应用程序的入口。由于是在`yarn`环境下启动，在前期准备`submit`环境时会有差异，差异点在`prepareSubmitEnvironment(SparkSubmitArguments, Option[HadoopConfiguration])`方法，在方法中会依`args.master`、`args.deployMode`进行模式匹配，当`master`为`yarn`时，会将`childMainClass`设置为`org.apache.spark.deploy.yarn.YarnClusterApplication`作为资源调度的启动类。
 
 ```scala
 private[deploy] def prepareSubmitEnvironment(
