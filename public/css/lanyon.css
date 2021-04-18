@@ -312,7 +312,8 @@ a.sidebar-nav-item:focus {
 
 .page,
 .post {
-  margin-bottom: 4em;
+  /* margin-bottom: 4em; */
+  color: #222;
 }
 
 /* Blog post or page title */
