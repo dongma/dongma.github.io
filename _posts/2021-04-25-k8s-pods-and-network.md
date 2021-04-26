@@ -66,3 +66,43 @@ default via 10.168.0.1 dev eth0
 
 `k8s`使用`NetworkPolicy`定义`pod`的隔离机制，使用`ingress`和`egress`定义访问策略（限制可请求的`pod`及`namespace`、`port`端口），其本质上是`k8s`网络插件在宿主机上生成了`iptables`路由规则；
 
+### 容器编排和Kubernetes作业管理
+
+随笔写一下，`K8S`中`pod`的概念，其本质是用来解决一系列容器的进程组问题。生产环境中，往往部署的多个`docker`实例间具有亲密性关系，类似于操作系统中进程组的概念。
+
+`Pod`是`K8s`中最小编排单位，将这个设计落实到`API`对象上，`Pod` 扮演的是传统部署环境里“虚拟机”的角色，把容器看作是运行在这个“机器”里的“用户程序”。比如，凡是调度、网络、存储，以及安全相关的属性，基本上是 `Pod` 级别的。
+
+在`Pod`的实现需要使用一个中间容器，这个容器叫作`Infra`容器。而其他用户定义的容器，则通过` Join Network Namespace `的方式，与 `Infra` 容器关联在一起。
+
+`Pod`的进阶使用中有一些高级组件，`Secret`、`ConfigMap`、`Downward API`和`ServiceAccountToken`组件，`Secret`的作用，是帮你把`Pod`想要访问的加密数据，存放到`Etcd`中。然后，你就可以通过在`Pod`的容器里挂载`Volume`的方式，访问到这些`Secret`里保存的信息了。
+
+`ConfigMap`保存的是不需要加密的、应用所需的配置信息。你可以使用`kubectl create configmap`从文件或者目录创建`ConfigMap`，也可以直接编写`ConfigMap`对象的`YAML`文件。
+
+`Deployment`是控制器组件，其定义编排比较简单，确保携带了`app=nginx`标签的`pod`的个数，永远等于`spec.replicas`指定的个数。它实现了`Kubernetes` 项目中一个非常重要的功能：`Pod` 的“水平扩展 / 收缩”（`horizontal scaling out/in`）。这个功能，是从`PaaS`时代开始，一个平台级项目就必须具备的编排能力。
+
+`Deployment`并不是直接操作`Pod`的，而是通过`ReplicaSet`进行管理。一个`ReplicaSet` 对象，其实就是由副本数目的定义和一个 `Pod`模板组成的。不难发现，它的定义其实是`Deployment`的一个子集。
+
+```shell
+$ kubectl scale deployment nginx-deployment --replicas=4deployment.apps/nginx-deployment scaled
+$ kubectl create -f nginx-deployment.yaml --record
+```
+
+通过`kubectl edit`指令可进行滚动更新，保存退出，`Kubernetes` 就会立刻触发“滚动更新”的过程。你还可以通过 `kubectl rollout status `指令查看` nginx-deployment` 的状态变化，将一个集群中正在运行的多个 `Pod` 版本，交替地逐一升级的过程，就是“滚动更新”。
+
+```shell
+$ kubectl rollout status deployment/nginx-deploymentWaiting for rollout to finish: 2 out of 3 new replicas have been updated...deployment.extensions/nginx-deployment successfully rolled out
+```
+#### 深入理解StatefulSet有状态应用
+
+`StatefulSet` 的核心功能，就是通过某种方式记录这些状态，然后在` Pod` 被重新创建时，能够为新 `Pod` 恢复这些状态。`StatefulSet`这个控制器的主要作用之一，就是使用`Pod `模板创建 `Pod` 的时候，对它们进行编号，并且按照编号顺序逐一完成创建工作。
+
+当 `StatefulSet` 的“控制循环”发现 `Pod `的“实际状态”与“期望状态”不一致，需要新建或者删除 `Pod` 进行“调谐”的时候，它会严格按照这些 `Pod` 编号的顺序，逐一完成这些操作。
+
+`DaemonSet` 的主要作用，是让你在 `Kubernetes` 集群里，运行一个`Daemon Pod`。 所以，这个 Pod 有如下三个特征：这个`Pod`运行在`Kubernetes` 集群里的每一个节点（`Node`）上；每个节点上只有一个这样的 `Pod` 实例；当有新的节点加入` Kubernetes` 集群后，该 `Pod` 会自动地在新节点上被创建出来；而当旧节点被删除后，它上面的 `Pod` 也相应地会被回收掉。
+
+场景比如各种监控组件和日志组件、各种存储插件的 ` Agent ` 组件、各种网络插件的  `Agent ` 组件都必须在每个节点上部署一个实例。
+
+`K8S`中`jOb`和`cronJob`的使用频率不多，`Deployment`、`StatefulSet`，以及` DaemonSet` 这三个编排概念主要编排“在线业务”，即：`Long Running Task`（长作业）。
+
+`Operator` 的工作原理，实际上是利用了 `Kubernetes` 的自定义` API `资源（`CRD`），来描述我们想要部署的“有状态应用”；然后在自定义控制器里，根据自定义 `API` 对象的变化，来完成具体的部署和运维工作。
+
