@@ -2,7 +2,7 @@
 layout: post
 title: 深入理解kafka消息中间件
 ---
-![kafka-message-system](https://raw.githubusercontent.com/SamMACode/springboot/master/document/images/kafka_message_system.png)
+![kafka-message-system](../../../../resource/2019/kafka_message_system.png)
 
 ### Kafka分布式消息中间件使用：
 
@@ -95,13 +95,13 @@ this's another message from kafka
 
 `kafka`的数据单元称为消息，与数据库里的一个"数据行"或者一条“记录”类似，为了提高效率消息被分批写入`kafka`，批次就是一组消息（使用单独线程处理）。
 
-![kafka-producer-customer-concept](https://raw.githubusercontent.com/SamMACode/springboot/master/document/images/kafka-producer-customer-concept.png)
+![kafka-producer-customer-concept](../../../../resource/2019/kafka-producer-customer-concept.png)
 
 `kafka`的消息通过`topic`（主题）进行分类，主题好比数据库中的表。`topic`可以被分为若干分区，一个分区就是一个提交日志。消息以追加的方式写入分区，然后以先入先出的顺序读取。由于一个主题一般包含几个分区，因此无法在整个主题范围内保证消息的顺序，但可以保证在单个分区的顺序。
 
 `kafka broker`是如何持久化数据的？总的来说，`kafka`使用消息日志（`log`）来保存数据的。总的来说，`kafka`使用消息日志（`log`）来保存数据，一个日志就是磁盘上一个只能追加（`append only`）消息的物理文件。因为只能追加写入，故避免了缓慢的随机`I/O`操作，改为性能更好的顺序`I/O`操作，这也是实现`kafka`高吞吐量特性的一个重要手段。为了避免日志写满磁盘空间，`kafka`必然要定期地删除消息以回收磁盘。其通过`log segment`机制，在`kafka`底层一个日志又近一步细分成多个日志片段，消息被追加写到当前新的日志段中。`kafka`在后台通过定时任务会定期检查老的日志段是否能够被删除，从而实现回收磁盘空间的目的。
 
-![kafka-partition-concept](https://raw.githubusercontent.com/SamMACode/springboot/master/document/images/kafka-partition-concept.png)
+![kafka-partition-concept](../../../..//resource/2019/kafka-partition-concept.png)
 
 `kafka`中分区机制指的是将每个主题划分多个分区（`partition`），每个分区是一组有序的消息日志。也就是说如果向一个双分区的主题发送一条消息，这条消息要么在分区`0`中，要么在分区`1`中。
 
@@ -155,7 +155,7 @@ sam@elementoryos: curl -X POST -H "Content-Type: application/vnd.schemaregistry.
 
 服务器在收到这些消息时会返回一个响应，如果消息成功写入`kafka`，就返回一个`RecordMetaData`对象，它包含了主题和分区信息，以及记录在分区里的偏移量。如果写入失败，则会返回一个错误，生产者在收到错误之后会尝试重新发送消息，几次之后如果还是失败，就返回错误信息。
 
-![kafka_consume_mechanism](https://raw.githubusercontent.com/SamMACode/springboot/master/document/images/kafka_consume_mechanism.png)
+![kafka_consume_mechanism](../../../..//resource/2019/kafka_consume_mechanism.png)
 
 
 
