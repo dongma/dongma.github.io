@@ -26,7 +26,7 @@ export OPENSSL_INCLUDE_DIR=/usr/local/Cellar/openssl@1.0.2q/include/
 #### Hadoop 1.0架构
 `GFS cluster`由一个`master`节点和多个`chunkserver`节点组成，多个`GFS client`可以对其进行访问，其中每一个通常都是运行用户级服务器进程的商用`linux`机器。大文件会被分为大小固定为`64MB`的块。
 
-<img src="../../../../resource/2021/hadoop/hadoop-architecture.jpg" width="700" alt="Hadoop 1.0架构图"/>
+<img src="../../../../resource/2021/hadoop/hadoop-architecture.jpg" width="900" alt="Hadoop 1.0架构图"/>
 
 `HDFS 1.0`中的角色划分：
 
@@ -36,3 +36,18 @@ export OPENSSL_INCLUDE_DIR=/usr/local/Cellar/openssl@1.0.2q/include/
   * `Client`：与`HDFS`交互，进行读写、创建目录、创建文件、复制、删除等操作。`HDFS`提供了多种客户端，命令行`shell`、`Java api`、`Thrift`接口、`C library`、`WebHDFS`等。
 
 `HDFS`的`chunk size`大小为`64MB`，这比大多数文件系统的`block`大小要大。较大的`block size`优势在于，在获取块位置信息时候，减少了`client`与`NameNode`交互的次数。其次，由于在大的`block`上，客户端更有可能在给定块上执行许多操作，可以与`NameNode`保持一个长时间的`TCP`连接来减少网络开销。第三，减少了存储在`NameNode`上的元数据的大小，这就可以使得`NameNode`将元数据信息保存在`Memory`中。
+
+#### HDFS Metadata元数据信息
+`GFS`论文中`Master`节点中存储了三种元数据信息：文件和数据块的`namespace`、从`files`文件到`chunkserver`的映射关系及`chunk`副本数据位置。前两种数据是通过`EditLog`存储在本地磁盘的，而`chunk location`则是在`Master`启动时向`chunk server`发起请求进行获取。
+
+一个大文件由多个`Data Block`数据集合组成，每个数据块在本地文件系统中是以单独的文件存储的。谈谈数据块分布，默认布局规则（假设复制因子为3）：
+  * 第一份拷贝写入创建文件的节点（快速写入数据）；
+  * 第二份拷贝写入同一个`rack`内的节点；
+  * 第三份拷贝写入位于不同`rack`的节点（应对交换机故障）；
+
+`HDFS`写流程，对于大文件，与`HDFS`客户端进行交互，`NN`告知客户端第一个`Block`放在何处？将数据块流式的传输到另外两个数据节点。`FsImage`和`EditLog`组件的目的：
+* `NameNode`的内存中有整个文件系统的元数据，例如目录树、块信息、权限信息等，当`NameNode`宕机时，内存中的元数据将全部丢失。为了让重启的`NameNode`获得最新的宕机前的元数据，才有了`FsImage`和`EditLog`。
+* `FsImage`是整个`NameNode`内存中元数据在某一时刻的快照（`Snapshot`），`FsImage`不能频繁的构建，生成`FsImage`需要花费大量的内存，目前`FsImage`只在`NameNode`重启才构建。
+* 而`EditLog`则记录的是从这个快照开始到当前所有的元数据的改动。如果`EditLog`太多，重放`EditLog`会消耗大量的时间，这会导致启动`NameNode`花费数小时之久。
+
+为了解决以上问题，引入了`Second NameNode`组件，我们需要一个机制来帮助我们减少`EditLog`文件的大小和构建`fsimage`以减少`NameNode`的压力。这与`windows`的恢复点比较像，允许我们对`OS`进行快照。
