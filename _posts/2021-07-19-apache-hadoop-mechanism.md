@@ -8,7 +8,6 @@ title: 大数据的三架马车之HDFS
 
 `HDFS`是`Hadoop`分布式文件系统，具有高容错性、高伸缩性，允许用户基于廉价精简部署，构件分布式文件系统，为分布式计算存储提供底层支持。`MapReduce`提供简单的`API`，允许用户在不了解底层细节的情况下，开发分布式并行程序，利用大规模集群资源，解决传统单机无法解决的大数据处理问题，其设计思想起源`Google GFS`、`MapReduce Paper`。
 
-<!-- more -->
 #### 在Mac上搭建Hadoop单机版环境
 从 https://hadoop.apache.org 下载二进制的安装包，具体配置可进行`Google`。配置完成后，在执行`HDFS`命令时会提示 `Unable to load native-hadoop library for your platform...using buildin-java classes..`，运行`Hadoop`的二进制包与当前平台不兼容。
 
@@ -16,6 +15,7 @@ title: 大数据的三架马车之HDFS
 ```shell
 $ mvn package -Pdist,native -DskipTests -Dtar
 ```
+<!-- more -->
 在编译hadoop-2.10.1的`hadoop-pipes`模块时出现错误，原因是由于`openssl`的版本不兼容，机器上的是`32`位，而实际需要`64`位。最后从github下载`openssl-1.0.2q.tar.gz`安装包，通过源码安装，并在/etc/profile中配置环境变量：
 ```shell
 export OPENSSL_ROOT_DIR=/usr/local/Cellar/openssl@1.0.2q

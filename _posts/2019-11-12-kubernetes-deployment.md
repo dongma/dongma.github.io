@@ -2,7 +2,7 @@
 layout: post
 title: 使用kubernetes构建微服务
 ---
-![kubernetes](https://raw.githubusercontent.com/SamMACode/springcloud/master/kubernetes/images/kubernetes_logo.png)
+![kubernetes](https://raw.githubusercontent.com/dongma/springcloud/master/kubernetes/images/kubernetes_logo.png)
 
 ##  Build distributed services with kubernetes
 
@@ -30,7 +30,7 @@ Client:
  Version:           18.09.7
 Server:
  Engine:
-  Version:          18.09.7   
+  Version:          18.09.7
 # 6.从镜像中心拉取hello-world镜像并进行运行
 sam@elementoryos:~$ sudo docker run hello-world
 Hello from Docker!
@@ -43,7 +43,7 @@ This message shows that your installation appears to be working correctly.
 
 
 
-2）使用`minikube`在本机搭建`kubernetes`集群，简单体验`k8s`： 
+2）使用`minikube`在本机搭建`kubernetes`集群，简单体验`k8s`：
 
 为了方便开发者开发和体验`kubernetes`，社区提供了可以在本地部署的`minikube`。由于国内网络的限制导致，导致在本地安装`minikube`时相关的依赖是无法下载。从`minikube`最新的`1.5`版本之后，已经提供了配置化的方式，可以直接从阿里云的镜像地址来获取所需要的`docker`镜像和配置。
 
@@ -257,7 +257,7 @@ spec:
 `Job`是`batch API`组`v1`版本的一部分，`yaml`定义了一个`Job`类型的资源，它将运行`luksa/batch-job`镜像，该镜像调用一个运行`120`秒的进程，然后退出。在`pod`的定义中，可以指定在容器中运行的进程结束时，`kubernetes`会做什么？这是通过`pod`配置的属性`restartPolicy`完成的，默认为`Always`配置 在`Job`中使用`OnFailure`的策略。可以在`yaml`文件中指定`parallelism: 2`来指定任务的并行度，通过创建`cronJob`资源在`yaml`中指定‘`schedule: 0,15,30,45 * * * *`定时任务表达式。`startingDeadlineSeconds: 15`指定`pod`最迟必须在预定时间后`15`秒开始执行。
 
 ```shell
-sam@elementoryos:~/kubernetes$ sudo kubectl create -f kubernetes-job.yaml 
+sam@elementoryos:~/kubernetes$ sudo kubectl create -f kubernetes-job.yaml
 job.batch/batch-job created
 sam@elementoryos:~/kubernetes$ sudo kubectl get jobs
 NAME        COMPLETIONS   DURATION   AGE
@@ -352,15 +352,15 @@ storage-provisioner                1/1     Running            0          2d6h
 
 ```shell
 sam@elementoryos:~/kubernetes$ sudo kubectl exec -it kubia-9vds6 bash
-[sudo] password for sam: ******        
+[sudo] password for sam: ******
 root@kubia-9vds6:/# curl http://kubia.default.svc.cluster.local
 curl: (6) Could not resolve host: kubia.default.svc.cluster.local
 root@kubia-9vds6:/# curl http://kubia.default
 curl: (6) Could not resolve host: kubia.default
-root@kubia-9vds6:/# curl http://kubia        
+root@kubia-9vds6:/# curl http://kubia
 curl: (6) Could not resolve host: kubia
 
-root@kubia-9vds6:/# cat /etc/resolv.conf 
+root@kubia-9vds6:/# cat /etc/resolv.conf
 nameserver 10.96.0.10
 search default.svc.cluster.local svc.cluster.local cluster.local localdomain
 ```
@@ -369,7 +369,7 @@ search default.svc.cluster.local svc.cluster.local cluster.local localdomain
 
 ```shell
 sam@elementoryos:~/kubernetes$ sudo kubectl describe svc kubia
-[sudo] password for sam:        
+[sudo] password for sam:
 Name:              kubia
 Namespace:         default
 Labels:            <none>
@@ -413,8 +413,8 @@ spec:
 在配置文件`kubia-svc-nodeport.yaml`中，`spec`部分的`type`属性值为`NodePort`类型。其中`targetPort`表示背后`pod`的目标端口号、通过`nodePort`的集群的`30123`端口可以访问该服务。通过`kubectl get svc kubia-nodeport`可以看到`ENTERNAL-IP`列数据为`<nodes>`，表示服务可通过任何集群节点的`ip`地址访问。其中`PORT(S)`列显示集群`IP(80)`的内部端口和节点端口`(30123)`。可以使用`curl`命令通过`10.109.37.229`地址进行请求`pod`。在使用`minikube`时，可以运行`minikube service <service-name>`命令，就可以通过浏览器轻松访问`NodePort`服务。
 
 ```shell
-sam@elementoryos:~/kubernetes$ sudo kubectl create -f kubia-svc-nodeport.yaml 
-[sudo] password for sam:        
+sam@elementoryos:~/kubernetes$ sudo kubectl create -f kubia-svc-nodeport.yaml
+[sudo] password for sam:
 service/kubia-nodeport created
 sam@elementoryos:~/kubernetes$ sudo kubectl get svc kubia-nodeport
 NAME             TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
@@ -550,7 +550,7 @@ Your business will go through a period of considerable expansion.
 
 ```shell
 sam@elementoryos:~/kubernetes$ sudo kubectl get pods --namespace kube-system
-[sudo] password for sam:        
+[sudo] password for sam:
 NAME                                        READY   STATUS             RESTARTS   AGE
 coredns-755587fdc8-nz7s8                    0/1     CrashLoopBackOff   402        4d20h
 etcd-minikube                               1/1     Running            1          4d20h
@@ -570,7 +570,7 @@ Volumes:
   lib-modules:
     Type:          HostPath (bare host directory volume)
     Path:          /lib/modules
-    HostPathType:  
+    HostPathType:
   kube-proxy-token-qdktp:
     Type:        Secret (a volume populated by a Secret)
     SecretName:  kube-proxy-token-qdktp
@@ -590,7 +590,7 @@ QoS Class:       BestEffort
 
 ```shell
 sam@elementoryos:~/kubernetes$ sudo kubectl create configmap fortune-config --from-literal=sleep-interval=25
-[sudo] password for sam:        
+[sudo] password for sam:
 configmap/fortune-config created
 
 sam@elementoryos:~/kubernetes$ sudo kubectl get configmap fortune-config -o yaml
@@ -619,7 +619,7 @@ spec:
   - image: luksa/fortune:env
     env:
     - name: INTERVAL
-      valueFrom: 
+      valueFrom:
         configMapKeyRef:
           name: fortune-config
           key: sleep-interval
@@ -641,10 +641,10 @@ Volumes:
     Type:        Secret (a volume populated by a Secret)
     SecretName:  default-token-bvhjx
     Optional:    false
-    
+
 sam@elementoryos:~/kubernetes/kubernetes-service$ sudo kubectl get secrets
 NAME                  TYPE                                  DATA   AGE
-default-token-bvhjx   kubernetes.io/service-account-token   3      5m59s    
+default-token-bvhjx   kubernetes.io/service-account-token   3      5m59s
 sam@elementoryos:~/kubernetes/kubernetes-service$ sudo kubectl describe secrets
 Name:         default-token-bvhjx
 Namespace:    default
@@ -713,7 +713,7 @@ spec:
 在`downward-api-env.yaml`中，引用`pod manifest`中的元数据名称字段而不是设定一个具体的值。通过`valueFrom`中的`fieldPath`属性获取`spec.nodeName`元数据。在`yaml`文件中有引用`metadata.name`、`metadata.namespace`、`status.podIP`、`status.nodeName`字段值。可以使用`kubectl exec downward env`查看`pod`中的环境变量：
 
 ```shell
-sam@elementoryos:~/kubernetes/downward-api$ sudo kubectl create -f downward-api-env.yaml 
+sam@elementoryos:~/kubernetes/downward-api$ sudo kubectl create -f downward-api-env.yaml
 pod/downward created
 sam@elementoryos:~/kubernetes/downward-api$ sudo kubectl exec downward env
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -776,14 +776,14 @@ sam@elementoryos:~/kubernetes/downward-api$ sudo kubectl exec downward cat /etc/
 key1="value1"
 key2="multi\nline\nvalue\n"
 kubernetes.io/config.seen="2019-12-01T15:08:21.544699469+08:00"
-kubernetes.io/config.source="api" 
+kubernetes.io/config.source="api"
 ```
 
 `Downward API`提供了一种简单的方式，将`pod`和容器的元数据传递给在它们内部运行的进程。通过`kubectl cluster-info`命令得到服务器的`Url`。因为服务器使用`https`协议并且需要授权，所以与服务器交互并不是一件简单的事情。可以尝试通过`curl`来访问它，使用`curl`的`--insecure`选项来跳过服务器证书检查环节。
 
 ```shell
 kubernetes.io/config.source="api"sam@elementoryos:~/kubernetes/downward-api$ sudo kubectl cluster-info
-[sudo] password for sam:        
+[sudo] password for sam:
 Kubernetes master is running at https://192.168.170.128:8443
 CoreDNS is running at https://192.168.170.128:8443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
 
@@ -831,4 +831,3 @@ spec:
 ```
 
 可以通过`embassador`容器简化与`api`服务器的交互，为了通过操作理解`ambassador`容器模式。我们像之前创建`curl pod`一样创建一个新的`pod`，但这次不是仅仅在`pod`中运行单个容器，而是基于一个多用途的`kubectl-proxy`容器镜像来运行一个额外的`ambassador`容器，当`pod`启动后会同时启动`kubectl-proxy`和`curl`服务。
-

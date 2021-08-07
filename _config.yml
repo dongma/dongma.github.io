@@ -1,17 +1,17 @@
 # Setup
-title:               NewYork CITY
+title:               Lanyon
 tagline:             '记录下日常工作与学习哈～，还有技术分享哦。。🎉'
 description:         'A reserved <a href="https://jekyllrb.com" target="_blank">Jekyll</a> theme that places the utmost gravity on content with a hidden drawer. Made by <a href="https://twitter.com/mdo" target="_blank">@mdo</a>.'
-url:                 https://sammacode.github.io
+url:                 https://dongma.github.io
 baseurl:             ''
 paginate:            4
 permalink:           pretty
 
 # About/contact
 author:
-  name:              Mark Otto
-  url:               https://twitter.com/mdo
-  email:             markdotto@gmail.com
+  name:              Sam Ma
+  url:               https://dongma.github.io
+  email:             sam_newyork@163.com
 
 # Gems
 plugins:

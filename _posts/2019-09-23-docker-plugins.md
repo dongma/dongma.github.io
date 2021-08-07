@@ -2,7 +2,7 @@
 layout: post
 title: 使用Docker构建微服务镜像
 ---
-![1569252813951](https://raw.githubusercontent.com/SamMACode/springcloud/master/document/images/1569252813951.png)
+![1569252813951](https://raw.githubusercontent.com/dongma/springcloud/master/document/images/1569252813951.png)
 
 > `Docker`包括一个命令行程序、一个后台守护进程，以及一组远程服务。它解决了常见的软件问题，并简化了安装、运行、发布和删除转件。这一切能够实现是通过使用一项`UNIX`技术，称为容器。
 
@@ -12,7 +12,7 @@ title: 使用Docker构建微服务镜像
  <!-- more -->
 
 所以，`Docker`项目给`PaaS`世界带来的"降维打击"，其实是提供了一种非常便利的打包机制。这种机制直接打包了应用运行所需要的整个操作系统，从而保证了应用运行所需要的整个操作系统，从而保证了本地环境和云端环境的高度一致，避免了用户通过"试错"来匹配两种不同的运行环境之间差异的痛苦过程。
- 
+
 ### 1. 容器技术基础概念
 
 `Docker`容器中的运行就像是其中的一个进程，对于进程来说，它的静态表现就是程序，平常都安安静静地待在磁盘上。而一旦运行起来，它就变成了计算机里的数据和状态的总和，这就是它的动态表现。而容器技术的核心功能，就是通过约束和修改进程的动态表现，从而为其创造出一个"边界"。
@@ -147,7 +147,7 @@ CMD ["python", "app.py"]
 
 ### 4. 使用Docker Compose进行服务编排
 
-> Compose is a tool for defining and running multi-container Docker applications. With Compose, you use a YAML file to configure your application’s services. Then, with a single command, you create and start all the services from your configuration.  
+> Compose is a tool for defining and running multi-container Docker applications. With Compose, you use a YAML file to configure your application’s services. Then, with a single command, you create and start all the services from your configuration.
 
 在`elementory OS`上安装`docker compose`服务，按照官方文档完成后可以通过`docker-compose version`来检查安装`compose`的版本信息：
 
@@ -156,7 +156,7 @@ sam@elementoryos:~/docker-compose$ sudo curl -L "https://github.com/docker/compo
 sam@elementoryos:~/docker-compose$ sudo chmod +x /usr/local/bin/docker-compose
 sam@elementoryos:~/docker-compose$ sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
 
-sam@elementoryos:~/docker-compose$ sudo docker-compose version        
+sam@elementoryos:~/docker-compose$ sudo docker-compose version
 docker-compose version 1.24.1, build 4667896b
 docker-py version: 3.7.3
 CPython version: 3.6.8
@@ -180,9 +180,9 @@ Successfully tagged docker-compose_web:latest
 
 ```shell
 sam@elementoryos:~/docker-compose$ sudo docker-compose ps
-         Name                       Command               State           Ports         
+         Name                       Command               State           Ports
 -------------------------------------------------------------------------------------
-docker-compose_redis_1   docker-entrypoint.sh redis ...   Up      6379/tcp              
+docker-compose_redis_1   docker-entrypoint.sh redis ...   Up      6379/tcp
 docker-compose_web_1     flask run                        Up      0.0.0.0:5000->5000/tcp
 ```
 
