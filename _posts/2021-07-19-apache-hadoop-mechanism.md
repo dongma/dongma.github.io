@@ -23,7 +23,7 @@ export OPENSSL_INCLUDE_DIR=/usr/local/Cellar/openssl@1.0.2q/include/
 ```
 然后重新执行`maven`命令，`hadoop`源码编译通过了。最后将`hadoop-dist`目录下的`native`包拷贝到`hadoop`二进制的源码包下就可以了。
 
-#### Hadoop 1.0架构
+### Hadoop 1.0架构
 `GFS cluster`由一个`master`节点和多个`chunkserver`节点组成，多个`GFS client`可以对其进行访问，其中每一个通常都是运行用户级服务器进程的商用`linux`机器。大文件会被分为大小固定为`64MB`的块。
 
 <img src="../../../../resource/2021/hadoop/hadoop-architecture.jpg" width="900" alt="Hadoop 1.0架构图"/>
