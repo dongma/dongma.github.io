@@ -33,7 +33,7 @@ reduce(String key, Iterator values): // key: a word
 ### Execution Overview
 在输入数据切分成数份后，`map`函数会被自动分发到多台机器上，输入数据切分可以在多不同的机器上并行执行。`partition()`函数（`hash(key) mod R`）会将中间`key`切分为`R`片，`reduce()`函数会根据切分结果分到不同机器。
 
-<img src="../../../../resource/2021/mapreduce/mapreduce_execution_overview.jpg" width="600" alt="mapreduce执行概览"/>
+<img src="../../../../resource/2021/mapreduce/mapreduce_execution_overview.png" width="800" alt="mapreduce执行概览"/>
 
 1. 用户程序中的`mapreduce library`会将输入的文件切分成`16MB`～`64MB`的文件块，然后它在`cluster`中启动多个副本。
 2. 在`cluster`上跑的多个程序中有一个是特殊的，其为`master`节点，剩余的为`worker`节点。`master`节点向`worker`节点分配任务，当`worker`节点有空闲时，会向其分配`map`或`reduce`任务。
@@ -45,8 +45,8 @@ reduce(String key, Iterator values): // key: a word
 ### 容错性考虑
 由于`mapreduce`旨在帮助使用成百上千台机器处理处理大量数据，因此该机器必须优雅地容忍机器故障，分别讨论下当`worker`和`master`节点故障时，如何进行容错？
 
-`worker`节点故障，`master`节点会周期性的`ping`所有的`worker`节点，若`worker`在给定时间内未响应，则`master`会标记`worker`为`failure`状态。此时，该`worker`节点上已执行完的`map task`会被重新置为`initial idle`状态，然后会等待其它`worker`执行此`task`。类似的，任何此`worker`上正在执行的`map()`或`reduce()`任务也会被重置为`idle`状态，然后等待调度。
+**`worker`节点故障**，`master`节点会周期性的`ping`所有的`worker`节点，若`worker`在给定时间内未响应，则`master`会标记`worker`为`failure`状态。此时，该`worker`节点上已执行完的`map task`会被重新置为`initial idle`状态，然后会等待其它`worker`执行此`task`。类似的，任何此`worker`上正在执行的`map()`或`reduce()`任务也会被重置为`idle`状态，然后等待调度。
 
 为什么已经完成的`map task`还要被重新执行呐？因为`map()`会将`intermediate data`写在本次磁盘上，当`worker`不可访问时，执行`reduce()`时无法从`failure worker`中取数据。而`completed reduce`不需要重新执行，因为`reduce()`函数已将最终结果写到外部存储`HDFS`上。
 
-`master`节点故障问题，容错方案较为简单，就是让`master`每隔一段时间将`data structures`写到磁盘上，做`checkpoint `。当`master`节点`die`后，重新启动一个`master`然后读取之前`checkpoint`的数据就可恢复状态。
+**`master`节点故障问题**，容错方案较为简单，就是让`master`每隔一段时间将`data structures`写到磁盘上，做`checkpoint `。当`master`节点`die`后，重新启动一个`master`然后读取之前`checkpoint`的数据就可恢复状态。
