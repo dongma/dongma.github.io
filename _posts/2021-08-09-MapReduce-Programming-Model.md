@@ -50,3 +50,12 @@ reduce(String key, Iterator values): // key: a word
 为什么已经完成的`map task`还要被重新执行呐？因为`map()`会将`intermediate data`写在本次磁盘上，当`worker`不可访问时，执行`reduce()`时无法从`failure worker`中取数据。而`completed reduce`不需要重新执行，因为`reduce()`函数已将最终结果写到外部存储`HDFS`上。
 
 **`master`节点故障问题**，容错方案较为简单，就是让`master`每隔一段时间将`data structures`写到磁盘上，做`checkpoint `。当`master`节点`die`后，重新启动一个`master`然后读取之前`checkpoint`的数据就可恢复状态。
+
+### Input文件切分，Split和Block的区别
+`split`是文件在逻辑上的划分，是程序中的一个独立处理单元，每一个`split`分配给一个`task`去处理。而在实际的存储系统中，使用`block`对文件在物理上进行划分，一个`block`的多个备份存储在不同节点上。
+
+文件切分算法主要用于确定`inputSplit`的个数及每个`inputSplit`对应的数据段，`splitSize=max{ minSize, min{totalSize/numSplits, blockSize}}`，最后剩下不足`splitSize`的数据块单独成为一个`InputSplit`。
+
+`Host`选择算法，`Input`对象由（`file`, `start`, `length`, `hosts`）这个四元组构成，节点列表是关键，关系到任务的本地性（`locality`），`mapreduce`优先让空闲资源处理本节点的数据。
+
+`mapreduce`的`sort`分两种：`map task`中`spill`数据的排序，数据写入本地磁盘之前，先要对数据进行一次本地排序（快排算法）。`reduce task`中数据排序，采用归并排序或小顶堆算法，`sort`和`reduce`可同时进行。
