@@ -59,3 +59,20 @@ reduce(String key, Iterator values): // key: a word
 `Host`选择算法，`Input`对象由（`file`, `start`, `length`, `hosts`）这个四元组构成，节点列表是关键，关系到任务的本地性（`locality`），`mapreduce`优先让空闲资源处理本节点的数据。
 
 `mapreduce`的`sort`分两种：`map task`中`spill`数据的排序，数据写入本地磁盘之前，先要对数据进行一次本地排序（快排算法）。`reduce task`中数据排序，采用归并排序或小顶堆算法，`sort`和`reduce`可同时进行。
+
+### MapReduce分布式计算框架
+<img src="../../../../resource/2021/mapreduce/map_reduce_phases.jpg" width="700" alt="mapreduce原理概述"/>
+
+`MapReduce`核心组件有`JobTracker`、`TaskTracker`和`Client`：
+* `JobTracker`负责集群资源监控和作业调度，通过心跳监控所有`TaskTracker`的健康状况。监控`Job`的运行情况、执行进度、资源使用，交由任务调度器负责资源分配，任务调度器有`FIFO Scheduler`和`Capacity Scheduler`。
+* `TaskTracker`具体执行`Task`的单元，以`slot`为单位等量划分本节点资源，分为`MapSlot`和`ReduceSlot`。其通过心跳周期性向`JobTracker`汇报本节点资源使用情况和任务执行进度，同时接收`JobTracker`的命令执行相应的操作（启动新任务、杀死任务等）。
+* `Client`提交用户编写的程序到集群，查看`Job`的运行状态。
+
+<img src="../../../../resource/2021/mapreduce/mr_job_lifecycle.jpg" width="700" alt="MR Job声明周期"/>
+
+`MR Job`声明周期文字描述：
+1. 作业提交和初始化：首先`JobClient`将作业相关文件上传到`HDFS`，然后`JobClient`通知`JobTracker`使其对作业进行初始化（`JobInProgress`和`TaskInProgress`）。
+2. 任务调度和监控：`JobTracker`的任务调度器按照一定策略（`TaskScheduler`），将`task`调度到空闲的`TaskTracker`。
+3. 任务`JVM`启动，`TaskTracker`下载任务所需文件，并为每个Task启动一个独立的JVM。
+4. `TaskTracker`启动`Task`，`Task`通过`RPC`将其状态汇报给`TaskTracker`，再由`TaskTracker`汇报给`JobTracker`。
+5. 完成作业后，会讲数据回写到`hdfs`。
