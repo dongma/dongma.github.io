@@ -37,7 +37,7 @@ message ContainerProto {
 `Yarn`的三种调度器实现为：`Fair Scheduler`(公平调度器)、`FIFO Scheduler`(先进先出调度器)、`Fair Scheduler`(公平调度器)，`FIFO`先进先出调度器，同一时间队列中只有一个任务在执行，可以充分利用所有的集群资源。`Fair Scheduler`和`Capacity Scheduler`有区别的一些地方，`Fair`队列内部支持多种调度策略，包括`FIFO`、`Fair`、`DRF（Dominant Resource Fairness）`多种资源类型（`e.g.CPU`、内存的公平资源分配策略）。
 
 ### Job提交流程
-在`yarn`上提交`job`的流程如下方的步骤图所示，`yarnRunner`向`rm`申请一个`Application`，`rm`返回一个资源提交路径和`application_id`，客户端提交`job`所需要的资源(切片+配置信息+`jar``包)到资源提交路径。
+在`yarn`上提交`job`的流程如下方的步骤图所示，`yarnRunner`向`rm`申请一个`Application`，`rm`返回一个资源提交路径和`application_id`，客户端提交`job`所需要的资源(切片+配置信息+`jar`包)到资源提交路径。
 <img src="../../../../resource/2021/yarn/yarn-submit-job.jpg" width="700" alt="yarn上job提交流程"/>
 `Capacity Scheduler`参数调整是在`yarn-site.xml`中，`yarn.resourcemanager.scheduler.class`用于配置调度策略`org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler`。
 
