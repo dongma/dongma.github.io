@@ -38,7 +38,23 @@ message ContainerProto {
 
 ### Job提交流程
 在`yarn`上提交`job`的流程如下方的步骤图所示，`yarnRunner`向`rm`申请一个`Application`，`rm`返回一个资源提交路径和`application_id`，客户端提交`job`所需要的资源(切片+配置信息+`jar`包)到资源提交路径。
-<img src="../../../../resource/2021/yarn/yarn-submit-job.jpg" width="700" alt="yarn上job提交流程"/>
+<img src="../../../../resource/2021/yarn/yarn-submit-job.jpg" width="650" alt="yarn上job提交流程"/>
 `Capacity Scheduler`参数调整是在`yarn-site.xml`中，`yarn.resourcemanager.scheduler.class`用于配置调度策略`org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler`。
 
 `Yarn`的高级特性`Node Label`，`HDFS`异构存储只能设置让某些数据（以目录为单位）分别在不同的存储介质上，但是计算调度时无法保障作业运行的环境。在`Nodel Label`出现之前，资源申请方无法指定资源类型、软件运行的环境（`JDK`、`python`）等，目前只有`Capacity Scheduler`支持此功能，`Fair Scheduler`正在开发，`yarn.node-labels.enable`用于开启`Node Label`的配置。
+
+### BigTable的开源实现HBase
+`BigTable`是一个分布式存储系统，用于管理结构化数据，旨在扩展到非常大的规模：数千个商品服务器上的`PB`级数据。`Google`的很多项目使用`HBase`来存储数据，包括：网页索引、`google`地图和`google`金融，这些应用程序在数据大小（从`URL`到网页再到卫星图像）和延迟要求（从后端批量处理到实时数据服务）方面对`BigTable`提出了不同的要求。
+
+`Hbase`是一个稀疏的、分布式的、持久的多纬排序图，该映射由行键、列键和时间戳索引组成，`map`中的每个值都是一个不可序列化的字节数组。其对应的数据模型（逻辑视图）如下：
+
+<img src="../../../../resource/2021/hbase/big_table_data_model.jpg" width="600" alt="HBase数据模型"/>
+
+```
+(row:string, column:string, time:int64) -> string
+```
+  * 行关键字`Row key`，唯一标识一行数据，用于检索记录。其可以是任意长度的字符串，最大长度为`64`KB。存储时会按照`row key`的字典序进行排序，其可通过单个`row key`、`row key`的`range`及全表扫描的方式来访问。
+  * `Column Family`，行中的列被成为列族，同一个列族的所有成员具有相同的列族前缀，列键`Column Key`也称为列名，必须以列族作为前缀，格式为列族：限定词。
+  * `Timestamp`和`Cell`，插入单元格时的时间戳，默认作为单元格的版本号，类型为`64`位整数。要定位一个单元，需满足"行键+列键+时间戳"三个要素。
+
+在物理视图上，`HBase`的每一个列族`Column Family`对应一个`StoredFile`对象，服务组件整体分为`HMaster`和`Region Server`两部分，底层使用`Hadoop`的`DataNode`来存储数据。
