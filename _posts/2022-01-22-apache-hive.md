@@ -34,3 +34,23 @@ title: 大数据时代数据仓库Hive
 * `Catalog`允许用户通过`Hive`、`Pig`、`MapReduce`共享数据和元数据，用户编写应用程序时，无需关心数据怎样存储、在哪里存储，避免因`schema`和存储格式的改变而受到影响。
 * 通过`HCatalog`，用户能通过工具访问`Hadoop`上的`Hive Metastore`。它为`MapReduce`和`Pig`提供了连接器，用户可以使用工具对`Hive`的关联列格式的数据进行读写。
 <img src="../../../../resource/2022/hive/hive-catalog.jpg" width="820" alt="HCatalog元数据管理"/>
+
+### 数据类型、数据定义
+hive支持基本数据类型有`tinyInt`、`int`、`bigInt`、`String`等，除此之外，其还支持复杂类型，如`struct`、`map`和`array`等。Hive中默认以`\n`作为行分割符，以`^A`用于字段分割符，用`^B`分割array或struct中的元素，或用于map中键-值对之间的分割，使用`^C`用于map中键和值之间的分割。
+
+若要实现自定义话，需用一组`row format delimited`语句，分别指定行、字段、map、list的分割符:
+```sql
+create table employees(
+  ...field list
+) row format delimited
+fields terminated by `\001`
+collection items terminated by `\002`
+map keys terminated by `\003`
+lines terminated by `\n` stored as textfile;
+```
+`hive`数据表分为管理表和外部表，`external`表用于加载外部数据源，删除外部表并不会删除`hdfs`上的文件数据，有些`HiveQL`语法结构并不适用于外部表。`hive`中有数据分区的概念，可以看到分区表具有重要的性优势，而且分区表还可以用一种符合逻辑分方式进行组织，比如分层存储。
+
+创建好表之后，可用`hsql`从`hdfs`中向hive表加载数据，用`overwrite`会完全覆盖表中的记录：
+```sql
+LOAD DATA INPATH '/tmp/hive/metastore/financials.db/employees/employee-22-0927.csv' INTO TABLE employees;
+```
