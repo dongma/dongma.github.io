@@ -35,7 +35,7 @@ title: 大数据时代数据仓库Hive
 * 通过`HCatalog`，用户能通过工具访问`Hadoop`上的`Hive Metastore`。它为`MapReduce`和`Pig`提供了连接器，用户可以使用工具对`Hive`的关联列格式的数据进行读写。
 <img src="../../../../resource/2022/hive/hive-catalog.jpg" width="820" alt="HCatalog元数据管理"/>
 
-### 数据类型、数据定义
+### 数据类型及数据定义
 hive支持基本数据类型有`tinyInt`、`int`、`bigInt`、`String`等，除此之外，其还支持复杂类型，如`struct`、`map`和`array`等。Hive中默认以`\n`作为行分割符，以`^A`用于字段分割符，用`^B`分割array或struct中的元素，或用于map中键-值对之间的分割，使用`^C`用于map中键和值之间的分割。
 
 若要实现自定义话，需用一组`row format delimited`语句，分别指定行、字段、map、list的分割符:
@@ -54,3 +54,29 @@ lines terminated by `\n` stored as textfile;
 ```sql
 LOAD DATA INPATH '/tmp/hive/metastore/financials.db/employees/employee-22-0927.csv' INTO TABLE employees;
 ```
+
+### UDF和自定义FileFormat
+在`hive`中用户可以自定义实现`UDF`，对hive库已有的函数进行扩展，例子，自定义`UDF`实现计算每个人所属的星座功能。实现类`UDFZodiacSign`继承基类`UDF`并实现七`evaluate()`函数，在查询中对于每行输入都会调用到`evaluate()`函数，而`evaluate()`处理后的值会返回给`Hive`。
+
+加载`hadoop-mapreduce-1.0.0.xx.jar`到`hive`中，只与当前`session`会话进行了绑定。
+```sh
+hive> add jar /Users/madong/datahub-repository/distributed-data-computing/hadoop-mapreduce/target/hadoop-mapreduce-1.0.0-jar-with-dependencies.jar
+```
+将函数`zodiac`注册到`hive`中，可以用`describe function extended zodiac`来查看函数明细内容：
+```sh
+hive> create temporary function zodiac as 'hadoop.apache.hive.UDFZodiacSign';
+# 实际执行真正的sql，zodiac(date)将日期转为了对应的星座
+hive (financials)> select name, zodiac(bday) from littlebigdata;
+OK
+name	_c1
+edward capriolo	Aquarius
+````
+在使用完`UDF`后，可以通过`drop temporary function if exists zodiac`删除此函数。`UDAF`自定义扩展和`UDF`一样，但其继承的是`GenericUDF`类，要想使所有函数都长期有效，可在`FunctionRegistry`中注册，然后重新替换`hive-exec-*.jar`这个jar文件就可以。
+```java
+registrUDF('parse_url', UDFParseUrl.class, false)
+registerGenericUDF('nvl', GenericUDFNvl.class)
+registerGenericUDF('split', GenericUDFSplit.class)
+```
+`FileFormat`是用自定义的方式从`HDFS`上读取内容，按指定的格式切分`fields`以及`row`数据，实现方式可参考`Base64TextInputFormat`和`Base64TextOutputFormat`。
+* hive conflient: https://cwiki.apache.org/confluence/display/Hive/DeveloperGuide#DeveloperGuide-RegistrationofNativeSerDes
+* base64 fileformat: https://github.com/apache/hive/tree/master/contrib/src/java/org/apache/hadoop/hive/contrib/fileformat
