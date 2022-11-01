@@ -56,7 +56,7 @@ LOAD DATA INPATH '/tmp/hive/metastore/financials.db/employees/employee-22-0927.c
 ```
 
 ### UDF和自定义FileFormat
-在`hive`中用户可以自定义实现`UDF`，对hive库已有的函数进行扩展，例子，自定义`UDF`实现计算每个人所属的星座功能。实现类`UDFZodiacSign`继承基类`UDF`并实现七`evaluate()`函数，在查询中对于每行输入都会调用到`evaluate()`函数，而`evaluate()`处理后的值会返回给`Hive`。
+在`hive`中用户可以自定义实现`UDF`，对hive库已有的函数进行扩展，例子，自定义`UDF`实现计算每个人所属的星座功能。实现类`UDFZodiacSign`继承基类`UDF`并实现`evaluate()`函数，在查询中对于每行输入都会应用到`evaluate()`函数，而`evaluate()`处理后的值会返回给`Hive`。
 
 加载`hadoop-mapreduce-1.0.0.xx.jar`到`hive`中，只与当前`session`会话进行了绑定。
 ```sh
