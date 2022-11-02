@@ -175,3 +175,61 @@ POST dynamic_mapping_test/_search
   }
 }
 ```
+## 深入ElasticSearch搜索机制
+1）类似于`mysql`的聚合函数，`elasticsearch`也提供了文档聚合，聚合采用`aggs`运算符号，示例如下，对`kibana`航班数据按`DestCountry`字段进行分组，并计算票价的平均值、最大值、最小值：
+  ```bash
+  # 按照目的地进行分桶的统计，并按平均票价进行统计
+GET kibana_sample_data_flights/_search
+{
+  "size": 0,
+  "aggs": {
+    "flight_dest": {
+      "terms": {"field": "DestCountry"},
+      "aggs": {
+        "avg_price": {
+          "avg": {
+            "field": "AvgTicketPrice"
+          }
+        },
+        "max_price": {
+          "max": {
+            "field": "AvgTicketPrice"
+          }
+        },
+        "min_price": {
+          "min": {
+            "field": "AvgTicketPrice"
+          }
+        }
+      }
+    }
+  }
+}
+```
+除此之外，`elasticsearch`还支持`stats`操作，按`flight_dest`字段进行分组，同时使用`stats`操作，并分别统计平均票价、目的地的天气情况。
+```bash
+GET kibana_sample_data_flights/_search
+{
+  "size": 0,
+  "aggs": {
+    "flight_dest": {
+      "terms": {
+        "field": "DestCountry"
+      },
+      "aggs": {
+        "stats_price": {
+          "stats": {
+            "field": "AvgTicketPrice"
+          }
+        },
+        "weather": {
+          "terms": {
+            "field": "DestWeather",
+            "size": 5
+          }
+        }
+      }
+    }
+  }
+}
+```
