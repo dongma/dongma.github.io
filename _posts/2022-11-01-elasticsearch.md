@@ -233,3 +233,213 @@ GET kibana_sample_data_flights/_search
   }
 }
 ```
+2）深入理解分词的逻辑，在使用`_bulk api`批量写入一批文档后，查询文档时，通过原有的字段是检索不到的，必须将其转换为小些。向`products`索引写入`3`条数据，分别为`Apple`的产品。
+```bash
+# _bulk api批量写入数据，一次写入3条数据
+POST /products/_bulk
+{"index": {"_id": 1}}
+{"productID": "XHDK-1902-#fj3", "desc": "iPhone", "price": 30}
+{"index": {"_id": 2}}
+{"productID": "XHDK-1003-#446", "desc": "iPad", "price": 35}
+{"index": {"_id": 3}}
+{"productID": "XHDK-6902-#521", "desc": "MBP", "price": 40}
+```
+通过`term query`按`iPhone`进行检索时，是查不到数据的。原因是在存储文档时，`elasticsearch`对字段值进行了分词，数据字段按小写形式进行存储，当用`iphone`检索时是可以的。此外，`elasticsearch`中每个字段都有`keyword`属性，在用`field.keyword`查询时则可以进行完整的匹配。
+```bash
+# 直接用iPhone在desc#value查询，搜不到记录。但用desc.keyword可以，因为在保存文档时，iPhone在索引中已进行了小写
+POST /products/_search
+{
+  "query": {
+    "term": {
+      "desc.keyword": {
+        "value": "iPhone"
+      }
+    }
+  }
+}
+# 将query改为filter的方式，忽略TF-IDF算分问题，避免相关性算分的开销，提升查询性能
+POST /products/_search
+{
+  "explain": true,
+  "query": {
+    "constant_score": {
+      "filter": {
+        "term": {
+          "productID.keyword": "XHDK-1902-#fj3"
+        }
+      }
+    }
+  }
+}
+```
+为了提升查询效率，可以用`constant_score#filter`来替换`term query`，因为其不进行算分，所以效率能高一些。同时，其也支持`range query`和`exists`操作符。
+```bash
+# 用range方式进行范围查询，通过doc.price进行过滤
+GET /products/_search
+{
+  "query": {
+    "constant_score": {
+      "filter": {
+        "range": {
+          "price": {
+            "gte": 20, "lte": 30
+          }
+        }
+      }
+    }
+  }
+}
+# 用exists来查找一些field值非空的文档，并将其进行返回
+POST /products/_search
+{
+  "query": {
+    "constant_score": {
+      "filter": {
+        "exists": {
+          "field": "desc"
+        }
+      }
+    }
+  }
+}
+```
+3）`query context`与`filter context`影响算分的问题，默认情况下`elasticsearch`会按照匹配度问题给文档进行打分，在文档每部分可使用`boost`来影响其分数，当文档中两个字段都含关键词时，可通过`boost`设置权重，进而影响文档的排名。
+```bash
+# query context与filter context影响算分问题
+POST /blogs/_bulk
+{"index": {"_id": 1}}
+{"title": "Apple iPad", "content": "Apple iPad,Apple iPad"}
+{"index": {"_id": 2}}
+{"title": "Apple iPad,Apple iPad", "content": "Apple iPad"}
+# 通过boost指定每部分字段的权重，进而影响文档的算分排序
+POST blogs/_search
+{
+  "query": {
+    "bool": {
+      "should": [
+        {"match": {
+          "title": {
+            "query": "apple,ipad",
+            "boost": 1
+          }
+          }
+        },
+        {"match": {
+          "content": {
+            "query": "apple,ipad",
+            "boost": 2
+          }
+        }}
+      ]
+    }
+  }
+}
+```
+在`bool`查询中，`must`和`should`是算分的，而`must_not`则不计入算分，在检索示例中可通过`must`及`must_not`来过滤文档。默认情况下，用`term query`查询时，只要`doc`中包含关键字的频率高，则其相应的算分也会高。在具有相同数量关键词的字段中，`doc`长度越小的文档相关性越高。
+```bash
+# 批量写入关于apple的新闻数据，批量写入文档记录
+POST news/_bulk
+{"index": {"_id": 1}}
+{"content": "Apple Mac"}
+{"index": {"_id": 2}}
+{"content": "Apple iPad"}
+{"index": {"_id": 3}}
+{"content": "Apple employee like Apple Pie and Apple Juice"}
+# 然而并不是所期望的，返回了apple食品记录
+POST news/_search
+{
+  "query": {
+    "bool": {
+      "must": {
+        "match": {"content": "apple"}
+      }
+    }
+  }
+}
+```
+可通过`must_not`对不符合条件的文档进行剔除，若只是想将不相关的文档分数减小，则可以通过`boosting#positive`或`boosting#negative`使得对文档进行重新的计分，这样不相关的文档也会进行展示，但其排名比较靠后。
+```bash
+# 用must_not排除pie字符串，只剩余电子产品
+POST news/_search
+{
+  "query": {
+    "bool": {
+      "must": {"match": {"content": "apple"}},
+      "must_not": {"match": {"content": "pie"}}
+    }
+  }
+}
+# 当不想删除时，可使用boosting#positive、negative方式排序
+POST news/_search
+{
+  "query": {
+    "boosting": {
+      "positive": {
+        "match": {"content": "apple"}
+      },
+      "negative": {
+        "match": {"content": "pie"}
+      },
+      "negative_boost": 0.5
+    }
+  }
+}
+```
+4）`disjunction query`也是关于文档相关性的，若文档中有两部分都匹配，若想按文档匹配度高的那一部分排序的话（不按累加求和），则应使用此查询。同时，还可按`tie_breaker`对文档分数进行扰乱，进而影响文档的排名。
+```bash
+PUT /blogs/_bulk
+{"index": {"_id": 1}}
+{"title": "Quick brown rabbits", "body": "Brown rabbits are commonly seen"}
+{"index": {"_id": 2}}
+{"title": "Keeping pets happy", "body": "My quick brown fox eats rabbits on a regular basis."}
+# 用dis_max#queries找两部分，各自评分最高的内容，此外还可通过tie_breaker进行调整
+POST /blogs/_search
+{
+  "query": {
+    "dis_max": {
+      "queries": [
+        {"match": {"title": "Brown fox"}},
+        {"match": {"body": "Brown fox"}}
+      ],
+      "tie_breaker": 0.2
+    }
+  }
+}
+```
+多字段查询的搜索语法，`most_fields`会累计多个字段的分数之和，`cross_fields`也就是当`query`在多个字段中存在时，就会返回结果，也就是所谓的跨字段查询。
+```bash
+PUT address/_doc/1
+{
+  "street": "5 Poland Street",
+  "city": "London",
+  "country": "United Kingdom",
+  "postcode": "W1V 3DG"
+}
+# 使用most_fields是可以的，但增加operator:and就不可以了。可将type改为cross_fields，表示将query string在多个字段中进行检索
+POST address/_search
+{
+  "query": {
+    "multi_match": {
+      "query": "Poland Street W1V",
+      "fields": ["street", "city", "country", "postcode"],
+      "type": "cross_fields",
+      "operator": "and"
+    }
+  }
+}
+```
+可以使用`alias`语法对索引进行重命名，应用场景多为`elasticsearch`索引数据备份，为避免应用服务端开发时修改配置，可做到无感数据源切换。
+```bash
+# index的alias操作，用于对address进行重命名
+POST _aliases
+{
+  "actions": [
+    {
+      "add": {
+        "index": "address",
+        "alias": "address_latest"
+      }
+    }
+  ]
+}
+```
