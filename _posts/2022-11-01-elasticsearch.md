@@ -176,64 +176,7 @@ POST dynamic_mapping_test/_search
 }
 ```
 ## 深入ElasticSearch搜索机制
-1）类似于`mysql`的聚合函数，`elasticsearch`也提供了文档聚合，聚合采用`aggs`运算符号，示例如下，对`kibana`航班数据按`DestCountry`字段进行分组，并计算票价的平均值、最大值、最小值：
-  ```bash
-  # 按照目的地进行分桶的统计，并按平均票价进行统计
-GET kibana_sample_data_flights/_search
-{
-  "size": 0,
-  "aggs": {
-    "flight_dest": {
-      "terms": {"field": "DestCountry"},
-      "aggs": {
-        "avg_price": {
-          "avg": {
-            "field": "AvgTicketPrice"
-          }
-        },
-        "max_price": {
-          "max": {
-            "field": "AvgTicketPrice"
-          }
-        },
-        "min_price": {
-          "min": {
-            "field": "AvgTicketPrice"
-          }
-        }
-      }
-    }
-  }
-}
-```
-除此之外，`elasticsearch`还支持`stats`操作，按`flight_dest`字段进行分组，同时使用`stats`操作，并分别统计平均票价、目的地的天气情况。
-```bash
-GET kibana_sample_data_flights/_search
-{
-  "size": 0,
-  "aggs": {
-    "flight_dest": {
-      "terms": {
-        "field": "DestCountry"
-      },
-      "aggs": {
-        "stats_price": {
-          "stats": {
-            "field": "AvgTicketPrice"
-          }
-        },
-        "weather": {
-          "terms": {
-            "field": "DestWeather",
-            "size": 5
-          }
-        }
-      }
-    }
-  }
-}
-```
-2）深入理解分词的逻辑，在使用`_bulk api`批量写入一批文档后，查询文档时，通过原有的字段是检索不到的，必须将其转换为小些。向`products`索引写入`3`条数据，分别为`Apple`的产品。
+1）深入理解分词的逻辑，在使用`_bulk api`批量写入一批文档后，查询文档时，通过原有的字段是检索不到的，必须将其转换为小些。向`products`索引写入`3`条数据，分别为`Apple`的产品。
 ```bash
 # _bulk api批量写入数据，一次写入3条数据
 POST /products/_bulk
@@ -303,7 +246,7 @@ POST /products/_search
   }
 }
 ```
-3）`query context`与`filter context`影响算分的问题，默认情况下`elasticsearch`会按照匹配度问题给文档进行打分，在文档每部分可使用`boost`来影响其分数，当文档中两个字段都含关键词时，可通过`boost`设置权重，进而影响文档的排名。
+2）`query context`与`filter context`影响算分的问题，默认情况下`elasticsearch`会按照匹配度问题给文档进行打分，在文档每部分可使用`boost`来影响其分数，当文档中两个字段都含关键词时，可通过`boost`设置权重，进而影响文档的排名。
 ```bash
 # query context与filter context影响算分问题
 POST /blogs/_bulk
@@ -385,7 +328,7 @@ POST news/_search
   }
 }
 ```
-4）`disjunction query`也是关于文档相关性的，若文档中有两部分都匹配，若想按文档匹配度高的那一部分排序的话（不按累加求和），则应使用此查询。同时，还可按`tie_breaker`对文档分数进行扰乱，进而影响文档的排名。
+3）`disjunction query`也是关于文档相关性的，若文档中有两部分都匹配，若想按文档匹配度高的那一部分排序的话（不按累加求和），则应使用此查询。同时，还可按`tie_breaker`对文档分数进行扰乱，进而影响文档的排名。
 ```bash
 PUT /blogs/_bulk
 {"index": {"_id": 1}}
@@ -441,5 +384,202 @@ POST _aliases
       }
     }
   ]
+}
+```
+## 深入`ElasticSearch`聚合分析
+`elasticsearch`聚合分`metric`和`bucket`两类，`metric`类似于一些指标（`count`、`avg`、`sum`等），而`bucket`相当于`sql`语句中的`group by`操作。
+```sql
+select count(brand)=>[metric] from cars group by brand=>[bucket];
+```
+一个简单的例子，通过`elasticsearch`请求分别统计`max`、`min`和`avg`的平均工资，`size`设置为`0`表示不返回原始文档。`aggs`表示聚合语法开始，其中`max`、`min`为聚合类型，里面的`field`值`salary`表示要聚合的字段。其实，简化语法可直接用`stats`替换`max`，其在一次执行中会统计出相关指标。
+```bash
+# Metrics聚合，找最低、最高及平均工资
+POST employees/_search
+{
+  "size": 0,
+  "aggs": {
+    "max_salary": {
+      "max": {
+        "field": "salary"
+      }
+    },
+    "min_salary": {
+      "min": {
+        "field": "salary"
+      }
+    },
+    "avg_salary": {
+      "avg": {
+        "field": "salary"
+      }
+    }
+  }
+}
+```
+`elasticsearch`通过`jobs#terms`进行分桶操作，首先一点`elasticsearch`不能对`text`类型字段进行分桶（`keyword`是可以的），需打开`fielddata`的配置。`aggs`还可以嵌套，如下是对员工按`age`进行排序，并取前2位进行展示。
+```bash
+# 对keyword进行聚合，必须要用.keyword，避免分词，直接用job会报错,还可指定terms#size参数
+POST employees/_search
+{
+  "size": 0,
+  "aggs": {
+    "jobs": {
+      "terms": {
+        "field": "job.keyword"
+      },
+      "aggs": {
+        "old_employee": {
+          "top_hits": {
+            "size": 2,
+            "sort": [
+              {
+                "age": {
+                  "order": "desc"
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
+# 对text字段打开fielddata，支持terms aggregation
+PUT employees/_mapping
+{
+  "properties": {
+    "job": {
+      "type": "text",
+      "fielddata": "true"
+    }
+  }
+}
+```
+`cardinate`操作相当于`sql`中的`distinct count`操作，可用于去重后的计数。`salary`还支持按`range`进行数量查询，其中`key`的值可以进行自定义。
+```bash
+# 对job.keyword进行聚合分析，cardinate操作，相当于做distinct count操作
+POST employees/_search
+{
+  "size": 0,
+  "aggs": {
+    "cardinate": {
+      "cardinality": {
+        "field": "job.keyword"
+      }
+    }
+  }
+}
+# salary range分桶，可以自定义桶#key，并按range进行查询
+POST employees/_search
+{
+  "size": 0,
+  "aggs": {
+    "salary_range": {
+      "range": {
+        "field": "salary",
+        "ranges": [
+          {
+            "to": 10000
+          },
+          {
+            "from": 10000,
+            "to": 20000
+          },
+          {
+            "key": ">20000",
+            "from": 20000
+          }
+        ]
+      }
+    }
+  }
+}
+```
+`histogram`用于展示员工薪资的直方图，`field`表示按哪个字段展示，`interval`为直方图每格的间隔大小。此外，`elasticsearch`还支持`pipeline`操作，其会将`aggs`后的结果再进行分析，常见的有`min_bucket`、`max_bucket`、`avg_bucket`等操作。
+```bash
+# salary Histogram，工资分布的直方图
+POST /employees/_search
+{
+  "size": 0,
+  "aggs": {
+    "salary_histogram": {
+      "histogram": {
+        "field": "salary",
+        "interval": 20000,
+        "extended_bounds": {
+          "min": 0,
+          "max": 100000
+        }
+      }
+    }
+  }
+}
+# elasticsearch pipeline操作, min_bucket最终选出最低平均工资,max_bucket则求最大的工作类型，avg_bucket只是所有类型工作的平均值,percentiles_bucket为百分位数的统计
+POST /employees/_search
+{
+  "size": 0,
+  "aggs": {
+    "jobs": {
+      "terms": {
+        "field": "job.keyword",
+        "size": 10
+      },
+      "aggs": {
+        "avg_salary": {
+          "avg": {
+            "field": "salary"
+          }
+        }
+      }
+    },
+    "min_salary_by_jobs": {
+      "percentiles_bucket": {
+        "buckets_path": "jobs>avg_salary"
+      }
+    }
+  }
+}
+```
+`Aggs Query`聚合的`filter`这块，共分为`Filter`、`Post_Filter`和`global`这`3`种类型，第一个在`aggs#old_person#filter`中，其行为属于前置`filter`（也即先过滤再`agg`）。第二个属于`post_aggs`，先进行`aggs`然后只展示`Dev Manager`的`bucket`桶。而`all#global{}`会排除`query#filter`的作用，而对所有`doc`进行计算。
+```bash
+# Filter，先按age#from 从35岁开始filter
+POST employees/_search
+{
+  "size": 0,
+  "aggs": {
+    "old_person": {
+      "filter": {
+        "range": {
+          "age": {
+            "from": 35
+          }
+        }
+      },
+      "aggs": {
+        "jobs": {
+          "terms": {
+            "field": "job.keyword"
+          }
+        }
+      }
+    }
+  }
+}
+
+#post filter，相当于先做bucket分桶操作，然后再进行filter过滤
+POST /employees/_search
+{
+  "aggs": {
+    "jobs": {
+      "terms": {
+        "field": "job.keyword"
+      }
+    }
+  },
+  "post_filter": {
+    "match": {
+      "job.keyword": "Dev Manager"
+    }
+  }
 }
 ```
