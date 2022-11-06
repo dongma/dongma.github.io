@@ -583,3 +583,267 @@ POST /employees/_search
   }
 }
 ```
+## `ElasticSearch`数据建模
+数据建模-对象及`Nested`对象，例如`blog`文档中含`User`对象，结构类似于`json`。在用`Rest`接口进行查询时，可通过`user.username`进行嵌套式查询。
+```bash
+# 插入一条blog信息, user为嵌套的对象，包含3个字段
+PUT nested_blog/_doc/1
+{
+  "content": "I like elasticsearch",
+  "time": "2022-11-06T00:00:00",
+  "user": {
+    "userid": 1,
+    "username": "Jack",
+    "city": "ShangHai"
+  }
+}
+# 查询blog的信息，对text做了分词，不区分大小写了
+POST nested_blog/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"match": {"content": "elasticsearch"}},
+        {"match": {"user.username": "Jack"}}
+      ]
+    }
+  }
+}
+```
+当嵌套字段类型为数组时，通过`bool`查询其返回的结果会存在异常。此时，`index`的`mapping`和查询的`dsl`也必须改为`nested query`。
+```bash
+# 电影的mapping信息，对于数组类型字段，需将`type`改为`nested`
+PUT my_movies
+{
+  "mappings": {
+    "properties": {
+      "actors": {
+        "type": "nested",
+        "properties": {"first_name": {"type": "keyword"},
+          "last_name": {"type": "keyword"}}
+      },
+      "title": {
+        "type": "text",
+        "fields": {"keyword": {"type": "keyword", "ignore_above": 256}}
+      }
+    }
+  }
+}
+# 写入一条电影信息, actors部分为一个数组
+PUT my_movies/_doc/1
+{
+  "title": "Speed",
+  "actors": [{"first_name": "Keanu", "last_name": "Reeves"},
+  {"first_name": "Dennis", "last_name": "Hopper"}]
+}
+```
+在进行数据检索时，`bool`类型的`query`，在`json`结构中也需指明`nested.path`，这样检索数据时，才会按同一个对象的`first_name`、`last_name`一起检索。此外，对于普通嵌套对象，`Agg`操作是不生效的。
+```bash
+# 查询电影信息，但是检索到了结果，需调整为Nested Query, 再根据条件筛选就正确
+POST my_movies/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"match": {"title": "Speed"}},
+        {"nested": {
+          "path": "actors",
+          "query": {
+            "bool": {
+              "must": [
+                {"match": {"actors.first_name": "Keanu"}},
+                {"match": {"actors.last_name": "Reeves"}}
+              ]
+            }
+          }
+        }}
+      ]
+    }
+  }
+}
+# 嵌套对象的Agg聚合操作，也需指定类型为Nested Query，普通Agg是不生效的
+POST my_movies/_search
+{
+  "size": 0,
+  "aggs": {
+    "actors": {
+      "nested": {
+        "path": "actors"
+      },
+      "aggs": {
+        "actor_name": {
+          "terms": {
+            "field": "actors.first_name",
+            "size": 10
+          }
+        }
+      }
+    }
+  }
+}
+```
+`elasticsearch`中的父子文档，索引的`mapping`如下所示，`blog_comments_relation#type`为`join`，在`relations`中定义了`blog`和`comment`的对应关系。在写入`blog`文档时，`blog_comments_relation#name`的值为`blog`。
+```bash
+# Es中的父/子文档，blog_comments_relation#此part未看懂
+PUT my_blogs
+{
+  "settings": {
+    "number_of_shards": 2
+  },
+  "mappings": {
+    "properties": {
+      "blog_comments_relation": {
+        "type": "join",
+        "relations": {
+          "blog": "comment"
+        }
+      },
+      "content": {
+        "type": "text"
+      },
+      "title": {
+        "type": "keyword"
+      }
+    }
+  }
+}
+# 索引父文档，分别写入两个文档
+PUT my_blogs/_doc/blog1
+{
+  "title": "Learning Elasticsearch",
+  "content": "Learning ELK @ geektime",
+  "blog_comments_relation": {
+    "name": "blog"
+  }
+}
+PUT my_blogs/_doc/blog2
+{
+  "title": "Learning Hadoop",
+  "content": "Learning Hadoop",
+  "blog_comments_relation": {
+    "name": "blog"
+  }
+}
+```
+索引`comment`子文档，需在`json`结构中指定`id`为`comment1`和`routing`信息，其中`index name`值为`comment`，对应的`parent`值为`blog1`。通过`my_blogs/_search`可以查到所有文档列表：
+```bash
+# 索引子文档，需指定routing路由字段值
+PUT my_blogs/_doc/comment1?routing=blog1
+{
+  "comment": "I am learning ELk",
+  "username": "Jack",
+  "blog_comments_relation": {
+    "name": "comment",
+    "parent": "blog1"
+  }
+}
+PUT my_blogs/_doc/comment2?routing=blog2
+{
+  "comment": "I like Hadoop !!!",
+  "username": "Jack",
+  "blog_comments_relation": {
+    "name": "comment",
+    "parent": "blog2"
+  }
+}
+# 查询所有文档，包含blog和comment两种类型
+POST my_blogs/_search
+{}
+```
+父子文档间的查询，通过父文档`id`查询，若查看blog#comment，则可以通过`parent_id`来查询，其中`type`值为`comment`。若想根据`comment`查询对应的`blog`，则可使用`has_child`注解。此外，可通过`comment2`和`routing`查看`blog2`下所有的评论数据。
+```bash
+# 根据父文档id查询
+GET my_blogs/_doc/blog2
+# parentId查询,依据blog2查到其下所有comment
+POST my_blogs/_search
+{
+  "query": {
+    "parent_id": {
+      "type": "comment",
+      "id": "blog2"
+    }
+  }
+}
+# has child查询返回父文档, has parent查询会返回子文档
+POST my_blogs/_search
+{
+  "query": {
+    "has_child": {
+      "type": "comment",
+      "query": {
+        "match": {
+          "username": "Jack"
+        }
+      }
+    }
+  }
+}
+# 通过id和routing来访问子文档
+GET my_blogs/_doc/comment2?routing=blog2
+```
+对于`elasticsearch`中已有的`index`，要修改其某个字段类型时，只能对当前索引进行`reindex`操作。直接更新索引`mapping`文件，会抛出`remote_transport_exception`的异常。
+```bash
+# reindex api，类似于导数据
+POST _reindex
+{
+  "source": {
+    "index": "reindex_blogs"
+  },
+  "dest": {
+    "index": "blogs_fix"
+  }
+}
+```
+`elasticsearch`中`pipeline`和`painless`脚本，可通过`PUT`请求直接注册一个`blog_pipeline`，`processors`可以有多种类型，像`split`会对指定字段进行切分，并且指定切分字符串为`,`。在索引文档时，可以指定`blog_pipeline`，这样存入文档的字段会被切分开。
+```bash
+# 为ES增加一个pipeline, 对index的文档进行计算
+PUT _ingest/pipeline/blog_pipeline
+{
+  "description": "a blog pipeline",
+    "processors": [
+    {
+      "split": {
+        "field": "tags",
+        "separator": ","
+      }
+    },
+    {
+      "set": {
+        "field": "views",
+        "value": 0
+      }
+    }
+  ]
+}
+# 测试pipeline，确实tags字段被切分了，同时增加了views字段
+POST _ingest/pipeline/blog_pipeline/_simulate
+{
+  "docs": [
+    {
+      "_source": {
+        "title": "Introducing big data....",
+        "tags": "openstask,k8s",
+        "content": "you known, for cloud"
+      }
+    }
+  ]
+}
+PUT tech_blogs/_doc/2?pipeline=blog_pipeline
+{
+    "title": "Introducing big data....",
+    "tags": "openstask,k8s",
+    "content": "you known, for cloud"
+}
+```
+`painless`脚本内容如下，在`script`语法中指定执行脚本，其中`ctx`可取上下文中定义的对象。
+```bash
+POST tech_blogs/_update/1
+{
+  "script": {
+    "source": "ctx._source.views += params.views",
+    "params": {
+      "views": 100
+    }
+  }
+}
+```
