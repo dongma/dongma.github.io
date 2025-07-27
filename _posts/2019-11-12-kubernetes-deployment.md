@@ -3,10 +3,10 @@ layout: post
 title: 使用kubernetes构建微服务
 ---
 ![kubernetes](https://raw.githubusercontent.com/dongma/springcloud/master/kubernetes/images/kubernetes_logo.png)
-
+<!-- more -->
 ##  Build distributed services with kubernetes
 
->  **Kubernetes** (commonly  stylized as k8s) is an open-source container-orchestration system for  automating application deployment, scaling, and management.  It aims to provide a "platform for automating deployment, scaling, and operations of application  containers across clusters of hosts". 
+>  **Kubernetes** (commonly  stylized as k8s) is an open-source container-orchestration system for  automating application deployment, scaling, and management.  It aims to provide a "platform for automating deployment, scaling, and operations of application  containers across clusters of hosts".
 
 ####  一、在`elementory OS`服务器搭建kubernetes环境
 
@@ -36,7 +36,7 @@ sam@elementoryos:~$ sudo docker run hello-world
 Hello from Docker!
 This message shows that your installation appears to be working correctly.
 ```
-<!-- more -->
+
 管理`docker`服务常用应用脚本：
 
 ` sudo service docker start `  启动`docker`服务、` sudo service docker stop ` 停止`docker`服务、` sudo service docker restart `重启docker服务.

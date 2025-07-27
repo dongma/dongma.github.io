@@ -18,12 +18,12 @@ title: 分析spark在yarn-client和yarn-cluster模式下启动
 ```
 
 在分析源码前需要在父`pom.xml`中引入`yarn`资源代码模块，使得其`class`文件加载到`classpath`中。
+<!-- more -->
 
 ```xml
 <!-- See additional modules enabled by profiles below -->
 <module>resource-managers/yarn</module>
 ```
-<!-- more -->
 与`standalone`模式应用启动一样，`SparkSubmit#runMain(SparkSubmitArguments, Boolean)`是应用程序的入口。由于是在`yarn`环境下启动，在前期准备`submit`环境时会有差异，差异点在`prepareSubmitEnvironment(SparkSubmitArguments, Option[HadoopConfiguration])`方法，在方法中会依`args.master`、`args.deployMode`进行模式匹配，当`master`为`yarn`时，会将`childMainClass`设置为`org.apache.spark.deploy.yarn.YarnClusterApplication`作为资源调度的启动类。
 
 ```scala
@@ -38,7 +38,7 @@ private[deploy] def prepareSubmitEnvironment(
         logWarning(s"Master ${args.master} is deprecated since 2.0." +
           " Please use master \"yarn\" with specified deploy mode instead.")
         YARN
-    }	 
+    }
     if (deployMode == CLIENT) {
     /* 在client模式下 用户程序直接在submit内通过反射机制执行，此时用户自己打的jar和--jars指定的jar都会被加载到classpath中  */
     	childMainClass = args.mainClass
@@ -51,8 +51,8 @@ private[deploy] def prepareSubmitEnvironment(
     if (isYarnCluster) {
       /* YARN_CLUSTER_SUBMIT_CLASS在cluster模式下为org.apache.spark.deploy.yarn.YarnClusterApplication */
       childMainClass = YARN_CLUSTER_SUBMIT_CLASS
-    } 
-    (childArgs, childClasspath, sparkConf, childMainClass) 
+    }
+    (childArgs, childClasspath, sparkConf, childMainClass)
 }
 ```
 
@@ -281,7 +281,7 @@ override def receive: PartialFunction[Any, Unit] = {
     } catch {
       case NonFatal(e) =>
       exitExecutor(1, "Unable to create executor due to " + e.getMessage, e)
-    } 
+    }
   /* Driver发送过来要进行调度的任务 */
   case LaunchTask(data) =>
     if (executor == null) {

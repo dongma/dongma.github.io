@@ -10,12 +10,12 @@ title: 深入理解kafka消息中间件
 
 数据为我们所做的每一件事都提供了动力。—— `Jeff Weiner, LinkedIn CEO`
 
-#### 一、基础环境搭建： 
+#### 一、基础环境搭建：
 
 `Kafka`依赖于`Zookeeper`的分布式节点选举功能，安装`Kafka`需安装`Jdk`、`Zookeeper`、`Scala`组件。
 
 从`Apache`官网中心下载`Zookeeper`组件，然后安装`Zookeeper`环境：
-
+<!-- more -->
 ```shell
 # 创建zookeeper的数据目录data
 > mdkir /usr/local/zookeeper/data
@@ -27,7 +27,6 @@ clientPort=2181
 > /usr/local/zookeeper/bin/zkServer.sh start
 ```
 在安装好`Java`和`Zookper`之后就可以进行安装`Kafka`消息中间件，可以从`Apache Kafka`官网下载`kafka`消息中间件，然后进行配置安装。
-<!-- more -->
 
 ```shell
 # 创建log目录用于临时存放kafka中间件日志信息
@@ -42,7 +41,7 @@ zookeeper.connect=localhost:2181
 
 ```shell
 # 使用kafka工具创建topic, 在参数中指定zookeeper的地址、replication-factor复制比例、及分区大小
-sam@elementoryos:~/kafka/kafka-install$ ./bin/kafka-topics.sh --create --bootstrap-server localhost:9092 
+sam@elementoryos:~/kafka/kafka-install$ ./bin/kafka-topics.sh --create --bootstrap-server localhost:9092
 \ --replication-factor 1 --partitions 1 --topic stream
 # 查看当前broker中所有的topic列表
 sam@elementoryos:~/kafka/kafka-install$ ./bin/kafka-topics.sh --list --bootstrap-server localhost:9092
@@ -52,14 +51,14 @@ avro-stream
 stream
 
 # 使用生产者客户端生产消息
-sam@elementoryos:~/kafka/kafka-install$ bin/kafka-console-producer.sh 
+sam@elementoryos:~/kafka/kafka-install$ bin/kafka-console-producer.sh
 \ --broker-list localhost:9092 --topic stream
 >this's the first message
 >this's another message from kafka
 
 # 使用消费者客户端消费,目前暂时使用--bootstrap-server客户端无法接收到消息,--zookeeper可以正常接收
-sam@elementoryos:~/kafka/kafka-install$ bin/kafka-console-consumer.sh 
-\ --bootstrap-server localhost:9092 
+sam@elementoryos:~/kafka/kafka-install$ bin/kafka-console-consumer.sh
+\ --bootstrap-server localhost:9092
 \ --topic stream --from-beginning
 this's the first message
 this's another message from kafka
@@ -118,15 +117,15 @@ this's another message from kafka
 `confluent `在其共有平台发布了`confluent schema registry`工具，作为注册表`schema`的实现。 可以从 https://www.confluent.io/download/ 进行下载，之后在服务器上启动`schema registry`服务。
 
 ```shell
-sam@elementoryos: ~/kafka_schema_registry/confluent-tools-kafka$ bin/schema-registry-start 
-\ etc/schema-registry/schema-registry.properties 
+sam@elementoryos: ~/kafka_schema_registry/confluent-tools-kafka$ bin/schema-registry-start
+\ etc/schema-registry/schema-registry.properties
 [2019-11-12 00:13:01,160] INFO Logging initialized @1547ms to org.eclipse.jetty.util.log.Slf4jLog (org.eclipse.jetty.util.log:193)
 ```
 
 然后将需要进行序列化实体的`schema`注册到`schema registry`中，最终其会返回一个`id`表示注册成功。
 
 ```shell
-sam@elementoryos: curl -X POST -H "Content-Type: application/vnd.schemaregistry.v1+json" --data 
+sam@elementoryos: curl -X POST -H "Content-Type: application/vnd.schemaregistry.v1+json" --data
 \ '{"schema": "{\"type\": \"record\", \"name\": \"Customer\", \"fields\": [{\"name\": \"customerName\", \"type\": \"string\"}, {\"name\":\"customerId\",\"type\":\"int\"}]}"}'
 \ http://192.168.170.130:8081/subjects/avro-stream-value/versions
 {"id":21}

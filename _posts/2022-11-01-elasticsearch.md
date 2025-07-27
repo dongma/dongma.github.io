@@ -13,6 +13,7 @@ bash> bin/elasticsearch -E node.name=node3 -E cluster.name=geektime -E path.data
 ```bash
 bash> docker run -d --name cerebro -p 9100:9000 lmenezes/cerebro:latest
 ```
+<!-- more -->
 
 ## 文档index基础操作
 1) `elasticsearch`中创建新文档，用`post`请求方式，`url`内容为`index/_doc/id`。当未指定{id}时，会自动生成随机的`id`。`put`方式用于更新文档，当`PUT users/_doc/1?op_type=create`或`PUT users/_create/1`指定文档`id`存在时，就会报错。
@@ -24,7 +25,6 @@ POST users/_doc
   "message": "trying out kibana"
 }
 ```
-<!-- more -->
 2) `elasticsearch`的分词器`analysis`，分词是指把全文本转换为一些列的单词`(term/token)`的过程，其通常由`Character Filters`、`Tokenizer`、`Token Filters`这三部分组成。具体`url`示例如下，`analyzer`的类型可以有：`standard`、`stop`、`simple`等。
 ```bash
 GET _analyze

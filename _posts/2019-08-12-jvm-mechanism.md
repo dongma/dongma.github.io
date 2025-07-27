@@ -6,7 +6,7 @@ title: 深入理解Java虚拟机
 `Java`与`C++`之间有一堵由内存分配和垃圾回收技术所围成的“高墙”，墙外面的人想进去，墙里面的人却想出来。对于`C`、`C++`程序开发人员来说，在内存管理领域，它们既是拥有最高权力的皇帝又是从事最基础工作的劳动人民。拥有每一个对象的所有权，也有担负着每一个对象生命开始到终结的维护责任。
 
 > 对`Java`程序员来说，在虚拟机自动内存管理机制的帮助下，不再需要为每一个`new`操作写配对的`delete`、`free`代码，因有虚拟机管理内存，不容易出现内存泄漏和内存溢出的问题。
-
+<!-- more -->
 ### 1. 虚拟机内存结构：
 
 `jvm`会把它管理的内存划分为若干个不同的数据区域。这些区域都有各自的用途，以及创建和销毁的时间。有的区域随着虚拟机进程的启动而存在，有些区域则依赖于用户线程的启动和结束而建立和销毁。
@@ -14,8 +14,8 @@ title: 深入理解Java虚拟机
 ![1575427884538](../../../../resource/2019/1575427884538.png)
 
 程序计数器：程序计数器是一块较小的内存空间，它可以看作是当前线程所执行的字节码的行号指示器，在虚拟机的概念模型里，字节码解释器工作时就是通过改变这个计数器的值来选取下一条需要执行的字节码指令。分支、循环、跳转、异常处理、线程恢复等基础功能都需要依赖这个计数器完成。
- <!-- more -->
- 
+
+
 `java`方法栈(`java method stack`)也是线程私有的，它的声明周期也是与线程相同。虚拟机栈描述的是`java`方法执行的内存模型：每个在执行的时候都会创建一个栈帧(`stack frame`)用于创建局部变量表、操作数栈、动态链接、方法出口信息。当退出当前执行的方法时，`java`虚拟机均会弹出当前线程的当前栈针，并将之舍弃。
 
 本地方法栈(`native method stack`)：本地方法栈与`java`方法栈发挥的作用是非常相似的，它们之间的区别不过是为虚拟机执行`java`方法服务，而本地方法栈则为虚拟机使用到的`native`方法服务。
@@ -69,7 +69,7 @@ class Merchant {
 class Traitor extends Merchant {
   @Override
   public double priceAfterDiscount(double oldPrice, Customer customer) {
-    if (customer.isVIP()) {                         // invokeinterface      
+    if (customer.isVIP()) {                         // invokeinterface
       return oldPrice * 价格歧视();                  // invokestatic
     } else {
       return super.priceAfterDiscount(oldPrice, customer);  // invokespecial
@@ -141,7 +141,7 @@ Code:
 Exception table:
 	from to target type
     4 	 11   14   any
-    14 	 17   14   any    
+    14 	 17   14   any
 ```
 
 
@@ -161,7 +161,7 @@ Exception table:
 ```shell
 sam@elementoryos:~$ jps -mlv
 5524 eureka-0.0.1.jar
-55677 sun.tools.jps.Jps -mlv 
+55677 sun.tools.jps.Jps -mlv
 -Denv.class.path=.:/home/sam/jdk1_8/jdk1_8_0_231/lib:/home/sam/jdk1_8/jdk1_8_0_231/jre/lib -Dapplication.home=/home/sam/jdk1_8/jdk1_8_0_231 -Xms8m
 ```
 
@@ -169,7 +169,7 @@ sam@elementoryos:~$ jps -mlv
 
 ```shell
 sam@elementoryos:~$  jstat -gc 5524 1s 4
- S0C    S1C    S0U    S1U      EC       EU        OC         OU       MC     MU    CCSC   CCSU   YGC     YGCT    FGC    FGCT     GCT   
+ S0C    S1C    S0U    S1U      EC       EU        OC         OU       MC     MU    CCSC   CCSU   YGC     YGCT    FGC    FGCT     GCT
 9216.0 512.0   0.0    0.0   294400.0 11918.3   63488.0    23750.9   56408.0 53351.8 7808.0 7199.2     21    0.567   4      0.411    0.978
 9216.0 512.0   0.0    0.0   294400.0 11918.3   63488.0    23750.9   56408.0 53351.8 7808.0 7199.2     21    0.567   4      0.411    0.978
 9216.0 512.0   0.0    0.0   294400.0 11918.3   63488.0    23750.9   56408.0 53351.8 7808.0 7199.2     21    0.567   4      0.411    0.978
@@ -185,8 +185,8 @@ sam@elementoryos:~$ jinfo 5524
 Attaching to process ID 5524, please wait...
 Debugger attached successfully.
 VM Flags:
-Non-default VM flags: -XX:CICompilerCount=2 -XX:InitialHeapSize=60817408 -XX:MaxHeapSize=958398464 -XX:MaxNewSize=319291392 -XX:MinHeapDeltaBytes=524288 -XX:NewSize=19922944 -XX:OldSize=40894464 -XX:+UseCompressedClassPointers -XX:+UseCompressedOops -XX:+UseFastUnorderedTimeStamps -XX:+UseParallelGC 
-Command line: 
+Non-default VM flags: -XX:CICompilerCount=2 -XX:InitialHeapSize=60817408 -XX:MaxHeapSize=958398464 -XX:MaxNewSize=319291392 -XX:MinHeapDeltaBytes=524288 -XX:NewSize=19922944 -XX:OldSize=40894464 -XX:+UseCompressedClassPointers -XX:+UseCompressedOops -XX:+UseFastUnorderedTimeStamps -XX:+UseParallelGC
+Command line:
 ```
 
 `jstack command`：`jstack`命令用于可以用来打印`java`进程中各个线程的栈轨迹，以及这些线程所持有的锁。`jstack`的其中一个应用场景便是死锁检测，可以用`jstack`获取一个已经死锁了的`java`程序的栈信息。

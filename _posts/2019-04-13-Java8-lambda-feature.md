@@ -8,10 +8,9 @@ java8提供了一个新的API（称为流 Stream）,它支持许多并行的操�
 在java8中加入Stream可以看作把另外两项扩充加入java8的原因：把代码传递给方法的简洁方式(方法引用、lambda)和接口中的默认方法；java8里面将代码传递给方法的功能(同时也能返回代码并将其包含在数据结构中)还让我们能够使用一套新技巧，通常称为函数式编程；
 
 >java8引入默认方法主要是为了支持库设计师，让他们能够写出更容易改进的接口。这一方法很重要，因为你会在接口中遇到越来越多的默认方法。由于真正需要编写默认方法的程序员较少，而且它们只是有助于程序改进。
-
+<!-- more -->
 ### 1. 行为参数化:
 让你的方法接受多种行为(或策略)作为参数，并在内部使用完成不同的行为。行为参数化是一个很有用的设计模式，它能够轻松的适应不断变化的需求。这种模式可以把一个行为(一段代码)封装起来，并通过传递和使用创建的行为(例如对Apple的不同谓词)将方法进行行为参数化。
- <!-- more -->
 
 有些类似于策略设计模式，java api中的很多方法都可以用不同的行为来参数化，这些方法往往与匿名类一起使用：比如对于数据进行排序的`Comparator`接口以及用于创建java线程实现的`Runnable`接口等；行为参数化可让代码更好的适应不断变化的要求，减轻未来的工作量。
 
@@ -146,7 +145,7 @@ int totalCalories = menu.stream().collect(reducing(0, Dish::getCalories, (i, j) 
 // 7.对数据流进行分组group by,将菜单中的菜肴按照类型进行分类.给groupingBy提供了一个传递Function，它提取了流中每一道Dish的Dish.Type，我们将这个函数叫做分类函数.
 Map<Dish.Type,List<Dish>> dishesType = menu.stream().collect(groupingBy(Dish::getType));
 // 多级分组对于groupingBy工厂方法创建的收集器中，它除了普通的分类函数外，还可以接受collector类型的第二个参数。要么进行二级分组的话，我们可以将一个内层的groupingBy传递给外层的groupingBy.
-Map<Dish.Type, Map<CalorieLevel, List<Dish>> dishesByTypeCaloriesLevel = 
+Map<Dish.Type, Map<CalorieLevel, List<Dish>> dishesByTypeCaloriesLevel =
 	menu.stream().collect(Dish::getType,
 	groupingBy(dish->{
       if(dish.getCalories() <= 400) return CaloricLevel.DIET;

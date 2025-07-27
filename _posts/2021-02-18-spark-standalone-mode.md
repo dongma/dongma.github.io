@@ -18,15 +18,12 @@ title: spark standalone模式启动源码分析
 ```
 
 在`spark`的`bin`目录下的`spark-submit.sh`脚本中存在调用`spark-class.sh`，同时会将`spark-submit`的参数作为`"$@"`进行传递：
-
+<!-- more -->
 ```shell
 # 在用spark-submit提交程序jar及相应参数时，调用该脚本程序  "$@"为执行脚本的参数，将其传递给spark-class.sh
 exec "${SPARK_HOME}"/bin/spark-class org.apache.spark.deploy.SparkSubmit "$@"
 ```
-
 在`spark-class.sh`中会将参数传递给`org.apache.spark.launcher.Main`用于启动程序：
-
-<!-- more -->
 
 ```shell
 # The exit code of the launcher is appended to the output, so the parent shell removes it from the
@@ -48,7 +45,7 @@ done < <(build_command "$@")
 参数传递到`org.apache.spark.launcher.Main#main(String[] argsArray)`方法用于触发运行`spark`应用程序，当`class`为`SparkSubmit`时，从`args`中解析校验请求参数，校验参数、加载`classpath`中的`jar`、向`executor`申请的资源来构建`bash`脚本，触发`spark`执行应用程序。
 
 ```scala
-public static void main(String[] argsArray) throws Exception {  
+public static void main(String[] argsArray) throws Exception {
     /* 通过spark-submit脚本启动时为此形式，exec "${SPARK_HOME}"/bin/spark-class org.apache.spark.deploy.SparkSubmit "$@" */
     if (className.equals("org.apache.spark.deploy.SparkSubmit")) {
       AbstractCommandBuilder builder = new SparkSubmitCommandBuilder(args);
@@ -515,7 +512,7 @@ private def createTaskScheduler(
 
 ```scala
 override def start() {
-  super.start() 
+  super.start()
     // Start executors with a few necessary configs for registering with the scheduler
     /* 只获取了Executor启动时用到的配置，不包含--jars传递的值 */
     val sparkJavaOpts = Utils.sparkJavaOpts(conf, SparkConf.isExecutorStartupConf)
@@ -525,7 +522,7 @@ override def start() {
     // 重点关注两个参数 spark.executor.extraLibraryPath spark.driver.extraLibraryPath
     val webUrl = sc.ui.map(_.webUrl).getOrElse("")
     val coresPerExecutor = conf.getOption("spark.executor.cores").map(_.toInt)
-	
+
   	val appDesc = ApplicationDescription(sc.appName, maxCores, sc.executorMemory, command,
       webUrl, sc.eventLogDir, sc.eventLogCodec, coresPerExecutor, initialExecutorLimit)
     client = new StandaloneAppClient(sc.env.rpcEnv, masters, appDesc, this, conf)
@@ -639,7 +636,7 @@ override def run(): Unit = {
       metricsSystem = env.metricsSystem)
     threwException = false
     res
-  } 
+  }
 }
 ```
 

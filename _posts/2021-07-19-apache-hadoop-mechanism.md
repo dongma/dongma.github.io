@@ -10,12 +10,11 @@ title: 大数据的三架马车之HDFS
 
 ### 在Mac上搭建Hadoop单机版环境
 从 https://hadoop.apache.org 下载二进制的安装包，具体配置可进行`Google`。配置完成后，在执行`HDFS`命令时会提示 `Unable to load native-hadoop library for your platform...using buildin-java classes..`，运行`Hadoop`的二进制包与当前平台不兼容。
-
+<!-- more -->
 为解决该问题，需在机器上编译`Hadoop`的源码包，用编译生成的`native library`替换二进制包中的相同文件。编译`Hadoop`源码需安装`cmake`、`protobuf`、`maven`、`openssl`组件。
 ```shell
 $ mvn package -Pdist,native -DskipTests -Dtar
 ```
-<!-- more -->
 在编译hadoop-2.10.1的`hadoop-pipes`模块时出现错误，原因是由于`openssl`的版本不兼容，机器上的是`32`位，而实际需要`64`位。最后从github下载`openssl-1.0.2q.tar.gz`安装包，通过源码安装，并在/etc/profile中配置环境变量：
 ```shell
 export OPENSSL_ROOT_DIR=/usr/local/Cellar/openssl@1.0.2q
