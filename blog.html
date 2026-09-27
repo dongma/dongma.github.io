@@ -1,0 +1,113 @@
+---
+layout: page
+title: 博客
+permalink: /blog/
+---
+
+<link rel="stylesheet" href="{{ '/assets/blog.css' | absolute_url }}">
+
+<div class="count">
+  <span>$ grep -c "" _posts/*.md → <b>{{ site.posts | size }}</b> 篇 · 全部公开，点击阅读</span>
+  <span class="rss">VOL.2019—2025 · <b>RSS ↗</b></span>
+</div>
+
+<div class="cols" id="cols">
+  <div id="colL"></div>
+  <div id="colR"></div>
+</div>
+<div class="endnote" id="endnote"></div>
+
+<div class="pgn" id="pgn"></div>
+
+<script>
+/* 复刻 src/06_blog.html 的双栏 + 翻页动效：
+ *  - 每页 12 篇（页 2 余数）；L/R 各 6 篇
+ *  - 翻页时 cols 向左滑出 280ms，然后渲染下一页，再从右滑入
+ *  - 当前页加粗高亮；首末页禁用对应箭头
+ */
+(function () {
+  var ALL = [
+    {% for post in site.posts %}{ y: "{{ post.date | date: '%y' }}", no: "{{ forloop.index }}", t: "{{ post.title | escape }}", tag: "{% if post.tags %}{{ post.tags | first }}{% endif %}", d: "{{ post.date | date: '%Y-%m' }}", u: "{{ post.url }}" }{% unless forloop.last %},{% endunless %}
+    {% endfor %}
+  ];
+
+  var PER = 12;
+  var pages = [];
+  for (var i = 0; i < ALL.length; i += PER) {
+    var slice = ALL.slice(i, i + PER);
+    var half = Math.ceil(slice.length / 2);
+    pages.push({
+      L: slice.slice(0, half),
+      R: slice.slice(half),
+      end: i + PER >= ALL.length ? "— 到底了 · 最早一篇写于 " + ALL[ALL.length-1].d : "— 第 " + (i/PER + 1) + " 页 · 还有 " + (ALL.length - i - PER) + " 篇在下一页 →"
+    });
+  }
+
+  function renderPage(p) {
+    var mk = function (it, idx) {
+      var yl = (window._ly !== it.y) ? '<div class="yearlbl">' + it.y + '</div>' : '';
+      window._ly = it.y;
+      return yl + '<div class="it"><span class="no">' + String(idx+1).padStart(2,'0') + '</span><h3><a href="' + it.u + '">' + it.t + '</a></h3><div class="m"><b>' + it.tag + '</b><br>' + it.d + '</div></div>';
+    };
+    window._ly = '';
+    document.getElementById('colL').innerHTML = pages[p].L.map(mk).join('');
+    window._ly = pages[p].L.length ? pages[p].L[pages[p].L.length-1].y : '';
+    var rHtml = pages[p].R.map(function(it, i){ return mk(it, pages[p].L.length + i); }).join('');
+    document.getElementById('colR').innerHTML = rHtml || '<div class="endnote">本页右栏留白是故意的</div>';
+    document.getElementById('endnote').textContent = pages[p].end;
+
+    var pgnEl = document.getElementById('pgn');
+    pgnEl.innerHTML = '';
+    var prev = document.createElement('a');
+    prev.textContent = '‹';
+    if (p === 0) prev.className = 'dis';
+    else prev.onclick = function () { go(p - 1); };
+    pgnEl.appendChild(prev);
+    pages.forEach(function(_, i) {
+      var a = document.createElement('a');
+      a.textContent = i + 1;
+      a.className = 'pg' + (i === p ? ' cur' : '');
+      a.onclick = function () { go(i); };
+      pgnEl.appendChild(a);
+    });
+    var next = document.createElement('a');
+    next.textContent = '›';
+    if (p === pages.length - 1) next.className = 'dis';
+    else next.onclick = function () { go(p + 1); };
+    pgnEl.appendChild(next);
+    var info = document.createElement('span');
+    info.className = 'info';
+    info.textContent = 'page.find(blog).limit(' + PER + ')';
+    pgnEl.appendChild(info);
+  }
+
+  var cur = 0, busy = false;
+  function go(p) {
+    if (busy || p === cur || p < 0 || p >= pages.length) return;
+    busy = true;
+    var cols = document.getElementById('cols');
+    cols.classList.add('out');
+    setTimeout(function () {
+      renderPage(p);
+      cur = p;
+      cols.classList.remove('out');
+      cols.classList.add('in');
+      // 翻页后让每篇 .it 逐个进入（与初次加载时一致）
+      var its = cols.querySelectorAll('.it');
+      its.forEach(function (el, i) {
+        el.classList.add('rise');
+        setTimeout(function () { el.classList.add('in'); }, 80 * i);
+      });
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          cols.classList.remove('in');
+          busy = false;
+        });
+      });
+    }, 280);
+  }
+
+  renderPage(0);
+})();
+</script>
+<script>window.RISE_TARGETS=['.count','.colhead','.yearlbl','.it','.pgn'];</script>

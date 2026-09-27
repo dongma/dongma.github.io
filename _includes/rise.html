@@ -1,0 +1,19 @@
+<script>
+/* 入场编排（design src/05_search.html 同款）：
+ *   1) 给每个匹配元素加 .rise → 进入「向下 + 透明」初始态
+ *   2) setTimeout 后加 .in → 触发 .rise.in 的 transition，向上 + 淡入
+ *   3) 80ms 起步、+80ms/个错峰，避免所有元素同时动
+ */
+(function () {
+  var defaultTargets = ['.tile'];
+  var targets = window.RISE_TARGETS || defaultTargets;
+  var i = 0;
+  targets.forEach(function (sel) {
+    document.querySelectorAll(sel).forEach(function (el) {
+      el.classList.add('rise');
+      setTimeout(function () { el.classList.add('in'); }, 80 + i * 80);
+      i++;
+    });
+  });
+})();
+</script>

@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(bundle exec:*)",
+      "Bash(jekyll serve:*)",
+      "WebFetch(domain:www.oiloil.org)",
+      "Bash(open:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git reset:*)",
+      "Bash(claude --version)",
+      "Bash(claude -v)",
+      "Bash(brew upgrade:*)",
+      "Bash(npm update:*)",
+      "Bash(claudecode)",
+      "Bash(/model minimax-m3:*)"
+    ]
+  }
+}

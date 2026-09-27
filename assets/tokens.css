@@ -1,0 +1,75 @@
+/* assets/tokens.css
+ * 设计令牌：值参考 resource/dongma_blog_design_spec.md §1，并把 src/*.html 里
+ * 反复出现的魔法值收敛到变量层。组件 CSS 必须从这里取色/字号/圆角，
+ * 不允许再写裸 hex 或裸 px（除非 token 表里没收录的一次性值）。
+ */
+
+:root {
+  /* 颜色 — 文本 */
+  --paper:       #fdfbf6;   /* 页面背景（spec §1） */
+  --ink-strong:  #3a3128;   /* body / logo / 标题默认色（src 五页共用） */
+  --ink:         #44403c;   /* 正文（spec §1） */
+  --ink-2:       #6b6155;   /* 次级文字（spec §1） */
+  --ink-3:       #a19789;   /* 元信息/注释（spec §1） */
+  --ink-note:    #5c5245;   /* blockquote/note 文字（src） */
+  --ink-4:       #b3a894;   /* placeholder（src） */
+
+  /* 颜色 — 强调 */
+  --accent:      #d97706;   /* 唯一强调色（spec §1） */
+  --accent-hi:   #ffb454;   /* hover/深色底上的强调（spec §1） */
+  --accent-deep: #b45309;   /* 行内 code / 部分内文强调（src 02_article） */
+
+  /* 颜色 — 终端 */
+  --term:        #26221d;
+  --term-ink:    #e8e2d6;
+  --term-dim:    #5c5650;
+  --term-mark:   #ff5f57;
+  --term-mark2:  #febc2e;
+  --term-mark3:  #28c840;
+
+  /* 颜色 — bento 六格糖果色（spec §1） */
+  --c-purple:    #cfc0ec;
+  --c-pink:      #f6aeb9;
+  --c-green:     #cfe0a4;
+  --c-yellow:    #ffe08c;
+  --c-blue:      #aed4e6;
+  --c-orange:    #f8b384;
+
+  /* 颜色 — 线条 / 底 */
+  --line:        #ece5d6;   /* 实线分隔（spec §1） */
+  --line-dash:   rgba(120,105,80,.35);  /* 虚线分隔（spec §1） */
+  --line-soft:   #efe8db;   /* divider / lede 边线 */
+  --line-card:   #e5ddcc;   /* 卡片/搜索框描边 */
+  --code-bg:     #f4efe6;   /* 行内 code 浅底 */
+  --code-border: #e9e2d3;
+  --note-bg:     #f7f2e9;   /* blockquote/note 浅底 */
+  --lede-line:   #f0e6d6;
+  --kbd-bg:      #faf7f0;
+  --card-bg:     #f6f1e8;   /* prev/next 卡片底 */
+  --pill-bg:     #f4efe4;   /* tag 浅底 */
+  --hover-bg:    #f9f5ec;   /* 搜索行 hover */
+  --mark-bg:     #ffe9c4;   /* 搜索关键词 mark */
+  --mark-fg:     #8a5a12;
+  --shadow:      0 14px 34px rgba(60,48,30,.16);
+
+  /* 字体（spec §1，对齐 src/02_article.html 的 "Noto Serif CJK SC"） */
+  --sans:  Inter, -apple-system, "PingFang SC", "HarmonyOS Sans SC",
+           "Microsoft YaHei", sans-serif;
+  --serif: "Noto Serif CJK SC", "Noto Serif SC", "Songti SC",
+           "STSong", "Songti TC", "Times New Roman", serif;
+  --mono:  ui-monospace, "SF Mono", "JetBrains Mono", Menlo,
+           Consolas, monospace;
+
+  /* 尺度（spec §1 + 硬约束） */
+  --radius-lg:    26px;
+  --radius-md:    18px;
+  --radius-sm:    12px;
+  --content-max:  1240px;   /* spec §1 字面值，本期未直接使用，预留 */
+  --grid-row:     162px;    /* bento 单行硬约束，禁改 */
+  --grid-gap:     22px;
+  --page-w:       1500px;   /* src 五页实际宽度 */
+  --page-pad-x:   70px;
+
+  /* 动效 */
+  --ease:        cubic-bezier(.2, .7, .3, 1);
+}

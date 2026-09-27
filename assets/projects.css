@@ -1,0 +1,260 @@
+/* assets/projects.css — 项目页（参 src/03_projects.html + spec §4）
+ *
+ * 设计原则：cards 默认可见，所有动画作为渐进增强。
+ * prefers-reduced-motion: 全部关掉，cards 仍正常显示。
+ */
+
+/* 字体精修（src/03 line 64-69 同款） */
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+body { letter-spacing: .2px; }
+.mono, .ghlink, .inout .line, .card .meta, .card .num, .card .detail .li, .card .detail .lnk, .anno {
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  letter-spacing: 0;
+}
+
+.projects {
+  position: relative;
+  /* 高度按 viewport 比例算：1250 * (100vw / 1500)，让 transform: scale 后容器布局高度匹配视觉高度 */
+  height: min(1250px, calc(100vw * 1250 / 1500));
+  width: 1500px;
+  transform-origin: top left;
+  overflow: hidden;
+}
+@media (max-width: 1500px) {
+  .projects {
+    transform: scale(calc((100vw - 2 * clamp(16px, 4.7vw, 70px)) / 1500));
+  }
+}
+/* 小屏（手机，< 768px）：放弃散落卡片布局，纵向堆叠 */
+@media (max-width: 767px) {
+  .projects {
+    transform: none;
+    height: auto;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .card, .scribble, .anno, .gh, svg.wires {
+    position: static !important;
+    transform: none !important;
+    width: 100% !important;
+    left: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+  }
+  svg.wires { display: none; }
+}
+
+.title {
+  font-family: var(--serif);
+  font-size: 38px;
+  font-weight: 700;
+  margin-top: 32px;
+  color: var(--ink-strong);
+}
+.sub {
+  color: var(--ink-2);
+  font-size: 15px;
+  margin: 8px 0 20px;
+}
+.sub code {
+  font-family: var(--mono);
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 5px;
+  padding: 1px 6px;
+  color: var(--accent-deep);
+  font-size: 13px;
+}
+.intro {
+  max-width: 760px;
+  font-size: 14.5px;
+  line-height: 1.9;
+  color: var(--ink-note);
+  margin-bottom: 8px;
+}
+.intro b { color: var(--accent-deep); font-weight: 600; }
+.intro .mono {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+/* ---------- 散落卡片 ---------- */
+.card {
+  position: absolute;
+  border-radius: var(--radius-md);
+  padding: 22px 26px;
+  cursor: pointer;
+  transition: transform .25s var(--ease), box-shadow .25s var(--ease);
+}
+.card:hover {
+  transform: rotate(0deg) scale(1.03);
+  z-index: 5;
+  box-shadow: var(--shadow);
+}
+.card .num {
+  position: absolute;
+  top: -14px; left: -14px;
+  height: 32px;
+  padding: 0 10px;
+  min-width: 32px;
+  border-radius: 999px;
+  background: var(--term);
+  color: var(--accent-hi);
+  font-family: var(--mono);
+  font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700;
+}
+.card h3 {
+  font-family: var(--serif);
+  font-size: 20px;
+  margin-bottom: 6px;
+  color: var(--ink-strong);
+}
+.card p {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: rgba(40,32,24,.7);
+}
+.card .meta {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: rgba(40,32,24,.55);
+  margin-top: 10px;
+}
+
+/* 深色变体（src/03 line 49-52） */
+.card.dark { background: var(--term); color: var(--term-ink); }
+.card.dark h3 { color: var(--accent-hi); }
+.card.dark p { color: #bdb6ab; }
+.card.dark .meta { color: #8a857c; }
+
+/* 6 张卡片尺寸 + 各自旋转角（src/03 line 54-59） */
+.p1 { width: 370px; transform: rotate(-1.2deg); }
+.p2 { width: 360px; transform: rotate( 1.5deg); }
+.p3 { width: 340px; transform: rotate(-0.8deg); }
+.p4 { width: 380px; transform: rotate( 1.8deg); }
+.p5 { width: 350px; transform: rotate(-1.5deg); }
+.p6 { width: 330px; transform: rotate( 0.9deg); }
+.card:hover { transform: rotate(0deg) scale(1.03); }  /* hover 回到正 */
+
+/* hover 详情（src/03 line 62-69） */
+.card .detail {
+  display: none;
+  margin-top: 14px;
+  border-top: 1.5px dashed rgba(120,105,80,.4);
+  padding-top: 12px;
+}
+.card:hover .detail,
+.card.open .detail { display: block; }
+.card .detail .li {
+  font-size: 12px;
+  line-height: 1.75;
+  color: rgba(40,32,24,.8);
+  margin-bottom: 4px;
+}
+.card .detail .li::before {
+  content: "· "; color: var(--accent-deep); font-weight: 700;
+}
+.card.dark .detail { border-top-color: #4a4338; }
+.card.dark .detail .li { color: #bdb6ab; }
+.card .detail .lnk {
+  display: inline-block;
+  margin-top: 8px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--accent-deep);
+  border-bottom: 1.5px solid #e8b04b;
+  padding-bottom: 1px;
+}
+.card.dark .detail .lnk { color: var(--accent-hi); border-color: #8a6d3b; }
+
+/* ---------- 批注 + 草稿圈（src/03 line 70-78） ---------- */
+.scribble {
+  position: absolute;
+  border: 1.5px dashed var(--scribble);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.anno {
+  position: absolute;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  color: var(--anno);
+  pointer-events: none;
+}
+
+/* ---------- SVG 连线（src/03 line 81-91）+ 虚线生长动画 ---------- */
+svg.wires {
+  position: absolute; inset: 0; pointer-events: none;
+  width: 100%; height: 100%;
+}
+svg.wires path {
+  fill: none;
+  stroke: var(--wire);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 6;
+  stroke-dashoffset: 200;
+  transition: stroke-dashoffset 1.2s var(--ease);
+}
+svg.wires path.draw { stroke-dashoffset: 0; }
+
+/* ---------- prefers-reduced-motion：关所有动画 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.001ms !important; }
+  .card:hover { transform: rotate(0deg) scale(1.03) !important; }
+  svg.wires path { stroke-dashoffset: 0 !important; }
+  .gh .btn2 { transition: none !important; }
+}
+
+/* ---------- 底部 GitHub 横幅（src/03 line 121-145） ---------- */
+.gh {
+  position: absolute;
+  left: var(--page-pad-x);
+  right: var(--page-pad-x);
+  bottom: 56px;
+  background: var(--term);
+  border-radius: 20px;
+  padding: 22px 34px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--term-ink);
+}
+.gh .l { display: flex; align-items: center; gap: 22px; }
+.gh .mark {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: var(--accent-hi);
+  color: var(--term);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700;
+  font-size: 19px;
+}
+.gh .nums { display: flex; gap: 26px; }
+.gh .nums div b {
+  font-size: 19px;
+  display: block;
+  font-family: var(--serif);
+}
+.gh .nums div span {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: #8a857c;
+}
+.gh .btn2 {
+  background: var(--accent-hi);
+  color: var(--term);
+  border-radius: 999px;
+  padding: 10px 22px;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-block;
+  transition: transform .25s var(--ease), box-shadow .25s var(--ease);
+}
+.gh .btn2:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(43,38,32,.25); }

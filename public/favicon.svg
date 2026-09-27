@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="0" y="0" width="64" height="64" rx="18" ry="18" fill="#26221d"/>
+  <text x="32" y="32"
+        font-family="ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace"
+        font-size="42"
+        font-weight="700"
+        fill="#ffb454"
+        text-anchor="middle"
+        dominant-baseline="central">&gt;</text>
+</svg>

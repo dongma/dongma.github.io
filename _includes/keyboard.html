@@ -1,0 +1,39 @@
+<script>
+/* ⌘K / Ctrl+K 唤起搜索框（spec §6.3） */
+(function () {
+  var input = document.getElementById('site-search-input');
+  if (!input) return;
+  document.addEventListener('keydown', function (e) {
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      input.focus();
+      input.select();
+    }
+    if (e.key === 'Escape' && document.activeElement === input) {
+      input.blur();
+    }
+  });
+  // Enter 跳转到 /search/?q=，让搜索页接管
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      var q = input.value.trim();
+      if (q) window.location.href = '{{ "/search/" | absolute_url }}?q=' + encodeURIComponent(q);
+    }
+  });
+})();
+
+/* 文章页 lede 引言里的英文标识符自动包成行内 code 胶囊
+ *   - 只在 .article .lede 内处理（excerpt 由 strip_html 输出，无标签，可安全重写）
+ *   - 匹配规则：连续 2+ 个英文字符 + 可含 . - _ 数字，至少含一个字母
+ *   - 避免命中纯数字或单字符
+ */
+(function () {
+  var lede = document.querySelector('.article .lede');
+  if (!lede || !lede.textContent) return;
+  var text = lede.textContent;
+  var re = /[A-Za-z][A-Za-z0-9]*[._-][A-Za-z0-9._-]+|[A-Za-z][A-Za-z0-9]{2,}/g;
+  lede.innerHTML = text.replace(re, function (m) {
+    return '<code class="lang-en">' + m + '</code>';
+  });
+})();
+</script>

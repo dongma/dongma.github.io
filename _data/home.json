@@ -1,0 +1,51 @@
+{
+  "_comment": "首页 bento 数据源. 之前在 _config.yml (series/github/site_stack/site_stack_io), 抽出后用 site.data.home.* 引用.",
+  "series": {
+    "title": "分布式缓存实战 · 系列",
+    "intro": "穿透、击穿、雪崩的一揽子工程化解法，含 10w QPS 压测数据。",
+    "tags": ["Go", "Redis", "12 篇"]
+  },
+  "github": {
+    "user": "dongma",
+    "stars": 16,
+    "forks": 8,
+    "repos": 11,
+    "commits": 132
+  },
+  "site_stack": [
+    { "label": "Java/Go",          "role": "主力语言" },
+    { "label": "Spring Cloud",    "role": "微服务" },
+    { "label": "GraphX",          "role": "图计算" },
+    { "label": "LangChain",       "role": "LLM 编排" },
+    { "label": "LangGraph",       "role": "Agent" },
+    { "label": "MCP",             "role": "LLM 工具协议" },
+    { "label": "Dify",            "role": "LLM 工作流" }
+  ],
+  "site_stack_io": {
+    "input": [
+      { "prefix": "在学", "items": ["Python", "Pytorch"] },
+      { "prefix": "在啃", "items": ["MCP 协议规范", "LLM 评测"] }
+    ],
+    "output": [
+      "39 篇博客 · 6 次内部分享",
+      "选型原则：boring technology first →"
+    ]
+  },
+  "tiles": {
+    "c_github": {
+      "title": "GitHub",
+      "stat_labels": ["stars", "commits/年"],
+      "link_arrow": "→"
+    },
+    "d_recent": { "title": "最近更新" },
+    "e_stack": {
+      "title": "技术栈 · 我在用的",
+      "inout_labels": ["// input", "// output"]
+    },
+    "f_subscribe": {
+      "title": "订阅更新",
+      "desc": "每月 2-3 篇，不灌水。",
+      "link_text": "RSS · Email · 公众号 →"
+    }
+  }
+}

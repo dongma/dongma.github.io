@@ -1,0 +1,183 @@
+/* assets/base.css
+ * 五页共用骨架：reset + .page + header（logo/nav/搜索胶囊/btn） + footer。
+ * 全部数值来自 tokens.css；组件样式（bento/article/projects/about/search）
+ * 由对应页面的 home.css / article.css 等独立提供。
+ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { background: var(--paper); }
+
+body {
+  background: var(--paper);
+  font-family: var(--sans);
+  color: var(--ink-strong);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a { color: inherit; text-decoration: none; }
+img { max-width: 100%; display: block; }
+
+/* ---------- .page ---------- */
+.page {
+  max-width: var(--page-w);       /* 1500px（macbook pro 13" 视口也能 fit） */
+  width: 100%;
+  margin: 0 auto;
+  position: relative;             /* .gh / footer 等 absolute 定位的锚点 */
+  /* padding 响应式：1500px 时 70px，<768px 时 16px，中间线性过渡 */
+  padding: 36px clamp(16px, 4.7vw, var(--page-pad-x)) 60px;
+  box-sizing: border-box;
+}
+
+/* ---------- header ---------- */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 44px;  /* src/06 同款（src line 8） */
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 21px;
+  color: var(--ink-strong);
+}
+.logo .prompt {
+  width: 30px; height: 30px;
+  border-radius: 9px;
+  background: var(--term);
+  color: var(--accent-hi);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono);
+  font-size: 17px;
+}
+.logo .dot { color: var(--accent); }
+
+nav {
+  display: flex;
+  gap: 26px;
+  font-size: 14.5px;
+  color: var(--ink-2);
+  align-items: baseline;  /* baseline 对齐：文字链接加 padding-bottom 后也能和搜索框/按钮文字同一基线 */
+}
+nav a:not(.btn), nav span.nav-item:not(.btn) {
+  display: inline-block;
+  padding: 8px 0 20px;  /* 上下都撑出 hover 命中区：上 8px、下 20px */
+  color: var(--ink-2);
+  transition: color .15s;
+  position: relative;
+}
+nav a:not(.btn):hover, nav span.nav-item:not(.btn):hover { color: var(--ink-strong); }
+/* nav 下划线生长（src/06_blog.html line 55-59） */
+nav a:not(.btn)::after, nav span.nav-item:not(.btn)::after {
+  content: "";
+  position: absolute; left: 0; bottom: 4px;  /* 下划线距文字 4px，留出 hover 区 */
+  width: 100%; height: 2.5px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform .75s var(--ease);
+}
+nav a:not(.btn):hover::after, nav span.nav-item:not(.btn):hover::after { transform: scaleX(1); }
+nav b { color: var(--ink-strong); font-weight: 600; }
+
+/* 搜索胶囊（⌘K）—— 出现在 header 里，聚焦时展开 230→300px + 琥珀描边 */
+.search-pill {
+  display: flex; align-items: center; gap: 8px;
+  background: #fff;
+  border: 1.5px solid var(--line-card);
+  border-radius: 999px;
+  padding: 9px 16px;
+  width: 230px;
+  transition: width .35s var(--ease), border-color .35s var(--ease), box-shadow .35s var(--ease);
+}
+.search-pill:focus-within {
+  width: 300px;
+  border-color: #e8b04b;
+  box-shadow: 0 4px 14px rgba(217,119,6,.12);
+}
+.search-pill .ico {
+  font-family: var(--mono);
+  color: var(--accent-deep);
+  font-size: 13px;
+}
+.search-pill .in {
+  flex: 1;
+  border: none; outline: none;
+  font-size: 13px;
+  background: transparent;
+  color: var(--ink-strong);
+  font-family: inherit;
+  min-width: 0;
+}
+.search-pill .in::placeholder { color: var(--ink-4); }
+.search-pill .kbd {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-3);
+  border: 1px solid var(--line-card);
+  border-radius: 5px;
+  padding: 1px 6px;
+  background: var(--kbd-bg);
+}
+
+/* GitHub 按钮（深底胶囊） */
+.btn {
+  background: var(--term);
+  color: var(--paper) !important;  /* 锁定浅色，避免被 nav a 等继承色覆盖 */
+  padding: 11px 22px;
+  border-radius: 999px;
+  font-size: 14px;
+  display: inline-block;
+  transition: transform .3s var(--ease), box-shadow .3s var(--ease);
+  cursor: pointer;
+}
+.btn:hover {
+  color: var(--paper) !important;
+  transform: translateY(-2px);
+  /* 阴影均匀分布在按钮四周（设计稿视觉） */
+  box-shadow: 0 4px 20px rgba(43,38,32,.35);
+}
+
+/* ---------- footer ---------- */
+footer {
+  margin-top: 26px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-3);
+  font-family: var(--mono);
+}
+
+/* ---------- 全站公共微交互 + 可访问性 ---------- */
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+body { letter-spacing: .2px; }
+
+/* 入场编排工具类（src/06_blog.html 思路）
+ * 用 CSS animation + animation-delay 替代 JS setTimeout 队列，
+ * 浏览器内部批处理所有动画，无 JS 调度开销。
+ * JS 只需：el.classList.add('rise'); el.style.setProperty('--i', i);
+ * CSS 自动按 --i 计算 delay（80ms 错峰）。 */
+.rise {
+  opacity: 0;
+  transform: translateY(32px);
+  will-change: opacity;
+}
+.rise.in {
+  opacity: 1;
+  transform: none;
+  transition: opacity .75s cubic-bezier(.2,.7,.3,1), transform .75s cubic-bezier(.2,.7,.3,1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
+  }
+  .rise, .rise.in { opacity: 1 !important; transform: none !important; transition: none !important; }
+}

@@ -1,0 +1,282 @@
+---
+layout: null
+---
+<!DOCTYPE html><html><head><link rel="preconnect" href="https://fonts.loli.net">
+<link rel="icon" type="image/svg+xml" href="{{ '/public/favicon.svg' | absolute_url }}">
+<link href="https://fonts.loli.net/css2?family=Noto+Serif+SC:wght@600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/tokens.css">
+<link rel="stylesheet" href="/assets/base.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#fdfbf6;font-family:"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;color:#3a3128;}
+/* .page 由 base.css 提供（流体布局，与 about 一致）。
+   .projects 是 1500×1250 的内容画布，按 .page 内容区宽度等比缩放，header 不缩放（保留原字号）。
+   负 margin-top 把画布上移，抵消画布顶部 390px 空白区，让卡片贴近上方的 intro 文字 */
+.projects{position:relative;width:1500px;height:min(1070px, calc((100vw - 2 * clamp(16px, 4.7vw, 70px)) * 1070 / 1500));margin-top:-260px;transform-box:border-box;transform-origin:top left;overflow:visible;}
+@media (max-width:1500px){
+  .projects{transform:scale(calc((100vw - 2 * clamp(16px, 4.7vw, 70px)) / 1500));}
+  body{overflow-x:hidden;}
+}
+.title{font-family:"Noto Serif CJK SC",serif;font-size:38px;font-weight:700;margin-top:32px;}
+.sub{color:#6b6155;font-size:15px;margin:8px 0 20px;}
+.sub code{font-family:monospace;background:#f4efe6;border:1px solid #e9e2d3;border-radius:5px;padding:1px 6px;color:#b45309;font-size:13px;}
+.intro{max-width:760px;font-size:14.5px;line-height:1.9;color:#5c5245;margin-bottom:8px;}
+.intro b{color:#b45309;font-weight:600;}
+.intro .mono{font-family:monospace;font-size:12.5px;color:#a19789;}
+/* scattered cards */
+.card{
+  position:absolute;border-radius:18px;padding:22px 26px;cursor:pointer;
+  transition:transform .35s cubic-bezier(.2,.7,.3,1),box-shadow .25s,opacity .35s;
+  /* 入场动画：先下移 30px，.in 触发后回到原位置（仅 translateY 变化，旋转角 --r 保持不变） */
+  transform:translateY(30px) rotate(var(--r,0deg));
+}
+.card.in{transform:translateY(0) rotate(var(--r,0deg));}
+.card:hover{transform:rotate(0deg) scale(1.03);z-index:5;box-shadow:0 14px 34px rgba(60,48,30,.16);}
+.card .num{position:absolute;top:-14px;left:-14px;height:32px;padding:0 10px;min-width:32px;border-radius:999px;background:#2b2620;color:#ffb454;font-family:monospace;font-size:13px;display:flex;align-items:center;justify-content:center;font-weight:700;}
+.card h3{font-family:"Noto Serif CJK SC",serif;font-size:20px;margin-bottom:6px;}
+.card p{font-size:12.5px;line-height:1.6;color:rgba(40,32,24,.7);}
+.card p.sub{font-family:"Noto Serif CJK SC",serif;font-size:14px;color:#b45309;font-weight:600;margin:0 0 8px;}
+.card.dark p.sub{color:#ffb454;}
+.card .intro{max-width:none;font-size:11.5px;line-height:1.7;color:rgba(40,32,24,.55);font-style:italic;margin-bottom:6px;}
+.card.dark .intro{color:#8a857c;}
+.card .meta{font-family:monospace;font-size:11.5px;color:rgba(40,32,24,.55);margin-top:10px;}
+.card.dark{background:#26221d;color:#e8e2d6;}
+.card.dark h3{color:#ffb454;}
+.card.dark p{color:#bdb6ab;}
+.card.dark .meta{color:#8a857c;}
+.p1{width:370px;transform:rotate(-1.2deg);}
+.p2{width:360px;transform:rotate(1.5deg);}
+.p3{width:340px;transform:rotate(-0.8deg);}
+.p4{width:380px;transform:rotate(1.8deg);}
+.p5{width:350px;transform:rotate(-1.5deg);}
+.p6{width:330px;transform:rotate(0.9deg);}
+.card .detail{display:none;margin-top:14px;border-top:1.5px dashed rgba(120,105,80,.4);padding-top:12px;}
+.card:hover .detail,.card.open .detail{display:block;}
+.card .detail .li{font-size:12px;line-height:1.75;color:rgba(40,32,24,.8);margin-bottom:4px;}
+.card .detail .li::before{content:"· ";color:#b45309;font-weight:700;}
+.card.dark .detail{border-top-color:#4a4338;}
+.card.dark .detail .li{color:#bdb6ab;}
+.card .detail .lnk{display:inline-block;margin-top:8px;font-family:monospace;font-size:11.5px;color:#b45309;border-bottom:1.5px solid #e8b04b;padding-bottom:1px;}
+.card.dark .detail .lnk{color:#ffb454;border-color:#8a6d3b;}
+.scribble{position:absolute;border:1.5px dashed #d9c9a8;border-radius:50%;}
+.anno{position:absolute;font-family:"PingFang SC",sans-serif;font-size:12.5px;color:#8a7f6d;}
+svg.wires{position:absolute;inset:0;pointer-events:none;}
+/* github strip */
+.gh{margin:32px 0 0;background:#26221d;border-radius:20px;padding:22px 34px;display:flex;justify-content:space-between;align-items:center;color:#e8e2d6;}
+.gh .l{display:flex;align-items:center;gap:22px;}
+.gh .mark{width:36px;height:36px;border-radius:10px;background:#ffb454;color:#26221d;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:19px;}
+.gh .nums{display:flex;gap:26px;}
+.gh .nums div b{font-size:19px;display:block;font-family:"Noto Serif CJK SC",serif;}
+.gh .nums div span{font-family:monospace;font-size:11.5px;color:#8a857c;}
+.gh .btn2{background:#ffb454;color:#26221d;border-radius:999px;padding:10px 22px;font-family:monospace;font-size:13px;font-weight:600;}
+footer{margin:14px 0 0;text-align:center;font-size:12px;color:#a19789;font-family:monospace;}
+
+/* ===== 全站公共：字体精修 + 微交互（header/nav/btn 等基础规则已由 base.css 提供，此处仅补项目页特有） ===== */
+html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;}
+body{letter-spacing:.2px;font-feature-settings:"kern";}
+h1,h2,h3{letter-spacing:.4px;}
+code,pre,[class*="mono"],.kbd{font-feature-settings:"tnum" 1,"zero" 1;}
+/* 入场编排工具类 */
+.rise{opacity:0;transform:translateY(32px);}
+.rise.in{opacity:1;transform:none;transition:opacity .75s cubic-bezier(.2,.7,.3,1),transform .75s cubic-bezier(.2,.7,.3,1);}
+@media (prefers-reduced-motion: reduce){
+  .rise,.rise.in{opacity:1 !important;transform:none !important;transition:none !important;}
+  *{animation:none !important;}
+}
+
+.card{transition:transform .25s,box-shadow .25s,opacity .35s cubic-bezier(.2,.7,.3,1);}
+.card{opacity:0;}
+.card.in{opacity:1;}
+.anno,.scribble,.gh{transition:opacity .4s cubic-bezier(.2,.7,.3,1);}
+.anno,.scribble,.gh{opacity:0;}
+.anno.in,.scribble.in,.gh.in{opacity:1;}
+svg.wires path{
+  fill:none;stroke:#c9b896;stroke-width:1.5;
+  /* src/03 原样：dasharray 1000 把整条路径视作单一线段，offset 1000 让线段在画布外不可见，
+   * .draw 时 dashoffset 走回 0 实现"画线"效果（1.4s ease + 0.3s 延迟） */
+  stroke-dasharray:1000;stroke-dashoffset:1000;
+  transition:stroke-dashoffset 1.4s ease .3s;
+}
+svg.wires path.draw{stroke-dashoffset:0;}
+</style></head><body><div class="page">
+<header>
+  <a class="logo" href="/"><span class="prompt">&gt;</span> dongma<span class="dot">.</span>dev</a>
+  <nav>
+    <a href="/">首页</a><a href="/blog/">博客</a><b>项目</b><a href="/about/">关于</a>
+    <a class="btn" href="https://github.com/dongma" target="_blank" rel="noopener">GitHub ↗</a>
+  </nav>
+</header>
+<div class="title">{{ site.data.projects.title }}</div>
+<div class="sub">{{ site.data.projects.subtitle }}<code>{{ site.data.projects.subtitle_code }}</code></div>
+<p class="intro">{% for line in site.data.projects.intro %}{% if forloop.first %}{{ line }}{% else %}<br>
+<span class="mono">{{ line }}</span></p>{% endif %}{% endfor %}
+<div class="projects">
+<svg class="wires" width="1500" height="1250">
+  <path d="M 560 390 C 640 360, 700 370, 760 400" fill="none" stroke="#c9b896" stroke-width="1.5" stroke-dasharray="5 6"/>
+  <path d="M 760 480 C 700 520, 660 540, 640 570" fill="none" stroke="#c9b896" stroke-width="1.5" stroke-dasharray="5 6"/>
+  <path d="M 640 680 C 620 720, 640 750, 700 770" fill="none" stroke="#c9b896" stroke-width="1.5" stroke-dasharray="5 6"/>
+  <path d="M 1000 720 C 1060 750, 1080 790, 1060 830" fill="none" stroke="#c9b896" stroke-width="1.5" stroke-dasharray="5 6"/>
+  <path d="M 700 870 C 640 880, 560 870, 520 840" fill="none" stroke="#c9b896" stroke-width="1.5" stroke-dasharray="5 6"/>
+</svg>
+
+<!-- '26 imola -->
+<div class="scribble" style="left:150px;top:366px;width:70px;height:34px;transform:rotate(-6deg);"></div>
+<div class="card p1" style="left:180px;top:390px;background:#cfc0ec;">
+  <span class="num">'26</span>
+  <h3>01 · imola</h3>
+  <p class="sub">Go 实战训练营</p>
+  <p>All-in-one Go web core：HTTP、ORM、cache、微服务一体化内核。</p>
+  <div class="detail">
+    <p class="intro">《go 实战训练营》学习过程中写的代码，主要包括 server 路由注册、orm 中 SQL 生成与事务操作、分布式缓存和 go 微服务这 4 部分，对后续学习 gin、gorm、gozero 等框架时有指导意义。</p>
+    <div class="li">起因：每个小服务都重复拼 gin + gorm + redis</div>
+    <div class="li">现状：路由分组、连接池、缓存装饰器已完成</div>
+    <div class="li">规划：服务发现与熔断</div>
+    <span class="lnk">github.com/dongma/imola →</span>
+  </div>
+  <div class="meta">Go · 个人开源 · 持续投入中</div>
+</div>
+<div class="anno" style="left:150px;top:362px;transform:rotate(-4deg);">← 鼠标悬停看详情</div>
+
+<!-- '26 lingot -->
+<div class="card p2 dark" style="left:790px;top:385px;">
+  <span class="num">'26</span>
+  <h3>02 · lingot</h3>
+  <p class="sub">AI Agent 实战集</p>
+  <p>MCP / LangChain / LangGraph / Dify / DeepSeek 一站式工程化练习。</p>
+  <div class="meta">Python · LLM · 持续投入中</div>
+  <div class="detail">
+    <p class="intro">项目名取自"灵珠"——寓意"灵性的铸块"。按 LLM 工程师的真实工作流组织子项目：从 MCP 工具协议、LangChain 链式调用、LangGraph 状态机 Agent，到 Dify 工作流与本地 DeepSeek 私有化部署，形成一个完整的 LLM 应用工程化练习体系。</p>
+    <div class="li">起因：AI 工具链碎片化，每个项目从零搭一遍</div>
+    <div class="li">现状：MCP / LangChain / LangGraph / Dify 子项目均已跑通 demo</div>
+    <div class="li">规划：接入 RAG 评估与 Agent 监控体系</div>
+    <span class="lnk">github.com/dongma/lingot →</span>
+  </div>
+</div>
+<div class="anno" style="left:800px;top:525px;transform:rotate(2deg);">项目名取自"灵珠"，寓意"灵性的铸块"</div>
+
+<!-- '25 spark-graphx -->
+<div class="card p3 dark" style="left:520px;top:565px;">
+  <span class="num">'25</span>
+  <h3>03 · spark-graphx</h3>
+  <p class="sub">Spark 生态学习</p>
+  <p>Apache Spark / RDD / DataFrame / GraphX 图计算一站式练习。</p>
+  <div class="meta">Scala / Python · 大数据 · 已开源</div>
+  <div class="detail">
+    <p class="intro">围绕 Apache Spark 核心数据结构（RDD、DataFrame、Dataset）和核心组件（Spark SQL、Spark Streaming、MLlib、GraphX）做系统性练习，包含算法、图计算、pyspark、spark-cluster、spark-datasets 等子模块。</p>
+    <div class="li">起因：用 MapReduce 写迭代计算太繁琐</div>
+    <div class="li">现状：Spark Core / SQL / GraphX 核心 API 均已覆盖</div>
+    <div class="li">规划：补 Structured Streaming 与 Delta Lake 实战</div>
+    <span class="lnk">github.com/dongma/spark-graphx →</span>
+  </div>
+</div>
+
+<!-- '25 distributed-data-computing -->
+<div class="card p4" style="left:150px;top:725px;background:#cfe0a4;">
+  <span class="num">'25</span>
+  <h3>04 · distributed-data-computing</h3>
+  <p class="sub">分布式图数据分析</p>
+  <p>基于 Spark 与 Neo4j 的图数据处理 + Hive SQL 实践。</p>
+  <div class="meta">Spark / Neo4j / Hive · 大数据</div>
+  <div class="detail">
+    <p class="intro">整理学习分布式计算和图数据库过程中的实践：Hadoop / Hive / Spark / Neo4j 的使用。子项目 databricks-app 用 Spark + Neo4j 做欺诈检测图分析，hive-sql 整理了 Hive 常见查询场景。</p>
+    <div class="li">起因：关系型数据库做图查询性能太差</div>
+    <div class="li">现状：Spark GraphFrames + Neo4j 欺诈检测 demo 跑通</div>
+    <div class="li">规划：迁移到云原生 Spark + 图数据库</div>
+    <span class="lnk">github.com/dongma/distributed-data-computing →</span>
+  </div>
+</div>
+<div class="scribble" style="left:420px;top:713px;width:76px;height:36px;transform:rotate(4deg);"></div>
+<div class="anno" style="left:430px;top:757px;transform:rotate(2deg);">图查询比 SQL JOIN 快几个数量级 ↑</div>
+
+<!-- '24 springcloud -->
+<div class="card p5" style="left:870px;top:705px;background:#f6aeb9;">
+  <span class="num">'24</span>
+  <h3>05 · springcloud</h3>
+  <p class="sub">Spring Cloud 微服务</p>
+  <p>eureka + config + gateway + oauth + order 全链路微服务实践。</p>
+  <div class="meta">Spring Cloud · 微服务 · 已开源</div>
+  <div class="detail">
+    <p class="intro">Spring Cloud 微服务系统设计：eureka-server 做服务发现、Reactive Gateway 做统一入口、config-server 做配置中心、oauth-service 做鉴权、order-service 做下单。完整跑通服务注册 → 网关路由 → 鉴权 → 业务调用 → 配置热更新的全链路。</p>
+    <div class="li">起因：单体应用耦合度高，迭代困难</div>
+    <div class="li">现状：注册中心 / 配置中心 / 网关 / 鉴权 / 订单 5 大模块已实现</div>
+    <div class="li">规划：接入 Kubernetes + 服务网格</div>
+    <span class="lnk">github.com/dongma/springcloud →</span>
+  </div>
+</div>
+
+<!-- '23 algorithm -->
+<div class="card p6" style="left:520px;top:895px;background:#ffe08c;">
+  <span class="num">'23</span>
+  <h3>06 · algorithm</h3>
+  <p class="sub">GraphX 图算法</p>
+  <p>用 Spark GraphX 实现 PageRank / ConnectedComponents / TriangleCount 等图算法。</p>
+  <div class="meta">Scala / GraphX · 图计算</div>
+  <div class="detail">
+    <p class="intro">Spark GraphX 图计算算法练习集：实现 PageRank、ConnectedComponents、TriangleCount、ShortestPaths、Pregel API 等经典图算法，每种算法配 Scala 示例 + 单元测试 + 真实数据集（如社交网络图）验证。</p>
+    <div class="li">起因：图算法只看论文无法落地</div>
+    <div class="li">现状：5 种图算法 + 测试用例已实现</div>
+    <div class="li">规划：增加属性图算法与动态图场景</div>
+    <span class="lnk">github.com/dongma/spark-graphx/tree/master/algorithm →</span>
+  </div>
+</div>
+</div>
+
+<div class="gh">
+  <div class="l"><span class="mark">G</span>
+    <div class="nums">
+      <div><b>11</b><span>public repos</span></div>
+      <div><b style="color:#ffb454">16</b><span>stars</span></div>
+      <div><b style="color:#ffb454">8</b><span>forks</span></div>
+    </div>
+  </div>
+  <span class="btn2">github.com/dongma →</span>
+</div>
+
+<footer>© 2026 dongma · built with ♥ and caffeine</footer>
+</div><script>
+window.RISE_TARGETS=[];
+window.addEventListener('load',()=>{
+  document.querySelectorAll('.card').forEach((el,i)=>{
+    el.style.setProperty('--r',(el.style.transform.match(/rotate\(([-\d.]+)deg\)/)||[0,0])[1]+'deg');
+    /* 项目加载慢 0.15s：原 150+i·110 → 300+i·110（整体延后 150ms） */
+    setTimeout(()=>el.classList.add('in'),300+i*110);});
+  document.querySelectorAll('.anno,.scribble').forEach((el,i)=>setTimeout(()=>el.classList.add('in'),1200+i*90));
+  /* 虚线 + gh 在最后一张卡片加载完（300+5·110=850ms + 350ms 过渡=1200ms）后才画 */
+  setTimeout(()=>{const g=document.querySelector('.gh');g&&g.classList.add('in');
+    document.querySelectorAll('.wires path').forEach(p=>p.classList.add('draw'));},1500);
+});
+</script><script>window.RISE_TARGETS=['.title','.sub','.intro','.gh .l','.gh .nums','.gh .btn2'];</script>
+<script>
+/* 视口 < 1500px 时按内容区宽度缩放 .projects（避免横向溢出，视觉 1:1 不变）。
+   header 在 .page 里、不缩放，nav/GitHub 按钮保留原字号，与 about 页一致。 */
+(function(){
+  var canvas = document.querySelector('.projects');
+  if (!canvas) return;
+  function fit(){
+    var w = window.innerWidth;
+    var pad = Math.min(70, Math.max(16, w * 0.047));
+    if (w >= 1500 + 2 * pad){
+      canvas.style.transform = '';
+      canvas.style.transformOrigin = '';
+      canvas.style.transformBox = '';
+      return;
+    }
+    var s = (w - 2 * pad) / 1500;
+    canvas.style.transformBox = 'border-box';
+    canvas.style.transformOrigin = '0px 0px';
+    canvas.style.transform = 'scale(' + s + ')';
+  }
+  fit();
+  window.addEventListener('load', fit);
+  window.addEventListener('resize', fit);
+})();
+</script>
+<script>
+(function(){
+  const targets = window.RISE_TARGETS || [];
+  let i=0;
+  targets.forEach(sel=>{document.querySelectorAll(sel).forEach(el=>{
+    el.classList.add('rise');setTimeout(()=>el.classList.add('in'),80+(i++)*80);});});
+})();
+</script>
+</body></html>

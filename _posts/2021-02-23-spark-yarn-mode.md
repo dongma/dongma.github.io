@@ -1,6 +1,7 @@
 ---
 layout: post
 title: 分析spark在yarn-client和yarn-cluster模式下启动
+tags: ["大数据"]
 ---
 > 文章分析`spark`在`yarn-client`、`yarn-cluster`模式下启动的流程，`yarn`是`apache`开源的一个资源管理的组件。`JobTracker`在`yarn`中大致分为了三块：一部分是`ResourceManager`，负责`Scheduler`及`ApplicationsManager`；一部分是`ApplicationMaster`，负责`job`生命周期的管理；最后一部分是`JobHistoryServer`，负责日志的展示；
 

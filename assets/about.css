@@ -1,0 +1,191 @@
+/* assets/about.css — 关于页（参 04_about.html + spec §5b） */
+
+/* 字体精修（src/04 line 50-53 同款） */
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+body { letter-spacing: .2px; }
+h1, h2, h3 { letter-spacing: .4px; }
+.term, .term .bar span, .term .p, .term .g, .term .b, .term .gr, .term .k, .inout .lbl,
+.skill .nm, .note, .contact span, h3.sec {
+  font-feature-settings: "tnum" 1, "zero" 1;
+  letter-spacing: 0;
+}
+
+.title {
+  font-family: var(--serif);
+  font-size: 38px;
+  font-weight: 700;
+  margin-bottom: 36px;
+  color: var(--ink-strong);
+}
+
+/* ---------- 终端自我介绍卡 ---------- */
+.term {
+  background: var(--term);
+  border-radius: var(--radius-md);
+  padding: 22px 26px;
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 2;
+  color: var(--term-ink);
+  margin-bottom: 40px;
+}
+.term .bar {
+  display: flex; gap: 6px; margin-bottom: 14px; align-items: center;
+}
+.term .bar i { width: 11px; height: 11px; border-radius: 50%; }
+.term .bar i.r { background: var(--term-mark); }
+.term .bar i.y { background: var(--term-mark2); }
+.term .bar i.g { background: var(--term-mark3); }
+.term .bar span { color: var(--term-dim); font-size: 12px; margin-left: 8px; }
+.term .p { color: var(--accent-hi); }
+.term .g { color: #a5d6a7; }
+.term .b { color: #82aaff; }
+.term .gr { color: #8a8a8a; }
+.term .k { color: #c792ea; }
+/* 终端逐行打出（src/04 原样移植 JS 给 .ln 加 .show） */
+.term .ln { display: block; opacity: 0; transition: opacity .25s; }
+.term .ln.show { opacity: 1; }
+
+/* ---------- 双栏 ---------- */
+.cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 44px;
+}
+
+h3.sec {
+  font-size: 16px;
+  font-family: var(--mono);
+  color: var(--accent-deep);
+  margin-bottom: 18px;
+  letter-spacing: 1px;
+}
+h3.sec::before { content: "$ "; color: var(--accent); }
+
+/* 经历时间线 */
+.exp {
+  border-left: 2px solid var(--line);
+  padding-left: 22px;
+}
+.job { position: relative; margin-bottom: 24px; }
+.job::before {
+  content: "";
+  position: absolute;
+  left: -27.5px;
+  top: 6px;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.job .when {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.job h4 {
+  font-size: 16.5px;
+  margin: 4px 0 2px;
+  color: var(--ink-strong);
+  font-weight: 700;
+}
+.job h4 em {
+  font-style: normal;
+  font-size: 13px;
+  color: var(--ink-2);
+  font-weight: 400;
+}
+.job p {
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--ink-note);
+  margin-top: 5px;
+}
+
+/* 技能条 */
+.skill { margin-bottom: 16px; }
+.skill .nm {
+  display: flex; justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 6px;
+  font-family: var(--mono);
+  color: var(--ink-strong);
+}
+.skill .nm span { color: var(--ink-3); }
+.track {
+  height: 8px;
+  border-radius: 99px;
+  background: #f0eadd;
+  overflow: hidden;
+}
+.fill {
+  height: 100%;
+  width: 0 !important;
+  border-radius: 99px;
+  background: var(--accent);
+  transition: width 1s cubic-bezier(.2,.7,.3,1) .6s;
+}
+.fill.go { width: var(--w) !important; }
+.fill.s2 { background: #e8a04b; }
+.fill.s3 { background: var(--c-purple); }
+.fill.s4 { background: #9ec9dd; }
+
+/* 经历节点错峰（src/04 JS 给 .job 加 .in） */
+.job { opacity: 0; transform: translateY(12px); }
+.job.in {
+  opacity: 1; transform: none;
+  transition: opacity .5s cubic-bezier(.2,.7,.3,1), transform .5s cubic-bezier(.2,.7,.3,1);
+}
+
+/* skills.conf / ping contact 子元素错峰淡入（rise IIFE 加 .rise 后约 80ms*i 加 .rise.in） */
+.cols .sec, .cols .skill, .cols .note, .cols .contact span {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity .5s cubic-bezier(.2,.7,.3,1), transform .5s cubic-bezier(.2,.7,.3,1);
+}
+.cols .sec.in, .cols .skill.in, .cols .note.in, .cols .contact span.in {
+  opacity: 1;
+  transform: none;
+}
+
+/* prefers-reduced-motion：直接显示终态 */
+@media (prefers-reduced-motion: reduce) {
+  .cols .sec, .cols .skill, .cols .note, .cols .contact span,
+  .job, .fill, .term .ln {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* note + contact */
+.note {
+  background: var(--note-bg);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 10px 10px 0;
+  padding: 14px 18px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--ink-note);
+  margin-bottom: 26px;
+}
+.contact {
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+.contact span {
+  border: 1.5px solid var(--line-card);
+  background: #fff;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-family: var(--mono);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: transform .3s, border-color .3s;
+}
+.contact span:hover { border-color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .rise, .rise.in { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .contact span { transition: none !important; }
+  * { animation: none !important; }
+}

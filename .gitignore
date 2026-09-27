@@ -41,3 +41,4 @@ validation-report.json
 # Folders to ignore
 node_modules
 bower_components
+/resource/dongma_blog_ui_designs/

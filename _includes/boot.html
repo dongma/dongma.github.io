@@ -1,0 +1,52 @@
+{% comment %}开场页仅在首页加载，避免 .term 重复 + 全局样式污染其他页面{% endcomment %}
+{% if page.url == '/' or page.url == '/index.html' %}
+<link rel="stylesheet" href="{{ '/assets/boot.css' | absolute_url }}">
+<div id="poster" hidden>
+  <div class="pg">
+    <div class="wm">{{ site.data.boot.wordmark }}<span class="dot">{{ site.data.boot.wordmark_dot }}</span></div>
+    <div class="tag">{{ site.data.boot.tagline | replace: "·", "<b>·</b>" }}</div>
+    <div class="term">
+      <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="fn">~ whoami</span></div>
+      <span style="color:#ffb454">$</span> cat dongma.txt<br>
+      {{ site.data.boot.terminal.whoami }}<br>
+      <span style="color:#ffb454">$</span> uptime<br>
+      <span style="color:#82aaff">{{ site.data.boot.terminal.uptime }}</span> · {{ site.data.boot.terminal.location }} <span style="color:#a5d6a7">●</span> <span class="cur"></span>
+    </div>
+    <div class="tl t1"></div><div class="tl t2"></div><div class="tl t3"></div>
+    <div class="tl t4"></div><div class="tl t5"></div><div class="tl t6"></div>
+    <div class="scrib sc1"></div>
+    <div class="anno a1">{{ site.data.boot.anno }}</div>
+    <div class="arrow">↘</div>
+    <div class="est">{{ site.data.boot.est }}</div>
+  </div>
+</div>
+<div class="skip" id="boot-skip">{{ site.data.boot.skip_text }}</div>
+
+<script>
+/* 开场页控制：仅在首页 + 同会话首次 + 非 reduced-motion 时播放 */
+(function () {
+  var KEY = 'dongma.bootplayed';
+  var poster = document.getElementById('poster');
+  var skip = document.getElementById('boot-skip');
+  if (!poster) return;
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduced || sessionStorage.getItem(KEY)) {
+    poster.hidden = true;
+    if (skip) skip.style.display = 'none';
+    return;
+  }
+  poster.hidden = false;
+  var done = false;
+  function end() {
+    if (done) return;
+    done = true;
+    poster.classList.add('gone');
+    sessionStorage.setItem(KEY, '1');
+    setTimeout(function () { poster.hidden = true; if (skip) skip.style.display = 'none'; }, 600);
+  }
+  setTimeout(end, 3200);
+  document.addEventListener('click', end, { once: true });
+  if (skip) skip.addEventListener('click', function (e) { e.stopPropagation(); end(); });
+})();
+</script>
+{% endif %}

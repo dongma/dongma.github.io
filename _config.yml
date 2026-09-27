@@ -1,21 +1,37 @@
 # Setup
-title:               Lanyon
-tagline:             '记录下日常工作与学习哈～，还有技术分享哦。。🎉'
-description:         'A reserved <a href="https://jekyllrb.com" target="_blank">Jekyll</a> theme that places the utmost gravity on content with a hidden drawer. Made by <a href="https://twitter.com/mdo" target="_blank">@mdo</a>.'
-url:                 https://dongma.github.io
-baseurl:             ''
-paginate:            5
-permalink:           pretty
+# 注：title / tagline / description / url / author 都在 _data/site.json
+# 首页 bento 数据（series / github / site_stack / site_stack_io / tiles）都在 _data/home.json
+# 模板里用 site.data.site.* / site.data.home.* 引用
 
-# About/contact
-author:
-  name:              Sam Ma
-  url:               https://dongma.github.io
-  email:             sam_newyork@163.com
+baseurl:             ''
+
+# Defaults
+defaults:
+  - scope:
+      path: ""        # 任何未指定 layout 的 Markdown / HTML 文件
+    values:
+      layout: site
 
 # Gems
-plugins:
-  - jekyll-paginate
+# plugins:  # 首页 bento 设计无需分页；后续按 tag 分页再开 jekyll-paginate
+#   - jekyll-paginate
+
+# Exclude：
+#   resource/dongma_blog_* = 设计参考材料（CLAUDE.md 第 5 条：只读、不进站点）
+#   其他 resource/ 子目录（如 resource/2025/）= 现有文章里硬编码引用的历史图片，
+#     保留进站点以保证旧文渲染不断图；后续如要把图片迁到 public/images/ 再调整。
+exclude:
+  - resource/dongma_blog_design_spec.md
+  - resource/dongma_blog_ui_designs
+  - node_modules
+  - vendor
+  - Gemfile
+  - Gemfile.lock
+  - README.md
+  - LICENSE.md
+  - CLAUDE.md
+  - .editorconfig
+  - .claude
 
 # Custom vars
 version:             1.1.0

@@ -1,6 +1,7 @@
 ---
 layout: post
 title: kafka client客户端实践及原理剖析
+tags: ["Kafka", "大数据"]
 ---
 
 > 主要描述`kafka java client`的一些实践，以及对`client`操作数据的一些原理进行剖析。
@@ -49,11 +50,19 @@ return partitions.stream()
   .map(PartitionInfo::partition).findAny().get();
 ```
 
-在`kafka`中，压缩可能发生在两个地方：生产者端和`broker`端。让`broker`端重新压缩消息有`2`种例外情况，`broker`端指定了和`producer`端不同的压缩算法，`broker`端发生了消息格式转换。一句话总结压缩和解压缩的话，`producer`端压缩、`broker`端保持、`consumer`端解压缩。
+在`kafka`中，压缩可能发生在两个地方：生产者端和`broker`端。
+
+让`broker`端重新压缩消息有`2`种例外情况，`broker`端指定了和`producer`端不同的压缩算法，`broker`端发生了消息格式转换。
+
+一句话总结压缩和解压缩的话，`producer`端压缩、`broker`端保持、`consumer`端解压缩。
 
 客户端一些高级功能`interceptor`，与`spring`中的拦截器原理是一样的（`aop`），不影响真实业务逻辑调用。生产者要想添加`interceptor`，只需继承`ProducerInterceptor<String, String>`类。
 
-无消息丢失配置如何实现？`producer` 永远要使用带有回调通知的发送 API，也就是说不要使用`producer.send(msg)`，而要使用 `producer.send(msg, callback)`。Kafka 中`consumer` 端的消息丢失就是这么一回事。要对抗这种消息丢失，办法很简单：维持先消费消息（阅读），再更新位移（书签）的顺序即可。
+无消息丢失配置如何实现？`producer` 永远要使用带有回调通知的发送 API，也就是说不要使用`producer.send(msg)`，而要使用 `producer.send(msg, callback)`。
+
+Kafka 中`consumer` 端的消息丢失就是这么一回事。
+
+要对抗这种消息丢失，办法很简单：维持先消费消息（阅读），再更新位移（书签）的顺序即可。
 
 设置`acks = all`。`acks` 是 `Producer `的一个参数，代表了你对“已提交”消息的定义。
 

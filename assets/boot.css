@@ -1,0 +1,176 @@
+/* assets/boot.css — 开场页（参 src/00_boot.html + spec §3 入场编排）
+ *
+ * 站点首次加载时覆盖首页；3.2s 后或点击任意位置淡出。
+ * 用 sessionStorage 标记已展示过，避免同会话内重复播放。
+ * prefers-reduced-motion: 全部跳过，立即关闭。
+ */
+
+:root { --ease: cubic-bezier(.2,.7,.3,1); }
+
+#poster {
+  position: fixed; inset: 0;
+  background: var(--paper);
+  z-index: 99;
+  overflow: hidden;
+  font-family: "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  color: var(--ink-strong);
+  transition: opacity .5s ease;
+  opacity: 1;
+}
+#poster.gone { opacity: 0; pointer-events: none; }
+.pg {
+  position: relative;
+  width: 1440px;
+  height: 810px;
+  margin: 0 auto;
+}
+
+/* —— 入场编排（0~1.1s） —— */
+.wm {
+  position: absolute;
+  left: 110px; top: 250px;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 170px;
+  line-height: 1;
+  letter-spacing: -2px;
+  opacity: 0;
+  transform: translateY(26px);
+  animation: rise .7s var(--ease) .15s forwards;
+}
+.wm .dot { color: var(--accent); }
+
+.tag {
+  position: absolute;
+  left: 118px; top: 485px;  /* design 445，但 wm 字号 170px 的 "g" 下伸部会贴上，+40px 拉开 */
+  font-family: var(--mono);
+  font-size: 15px;
+  color: var(--ink-2);
+  letter-spacing: 1px;
+  opacity: 0;
+  animation: fade .6s ease .55s forwards;
+}
+.tag b { color: var(--accent-deep); }
+
+.est {
+  position: absolute;
+  left: 118px; top: 700px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--ink-3);
+  letter-spacing: 2px;
+  opacity: 0;
+  animation: fade .6s ease .95s forwards;
+}
+
+.term {
+  position: absolute;
+  left: 850px; top: 180px;
+  width: 400px;
+  background: var(--term);
+  border-radius: 16px;
+  padding: 18px 20px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 2;
+  color: var(--term-ink);
+  transform: rotate(5deg) translateY(30px);
+  opacity: 0;
+  animation: termIn .7s var(--ease) .4s forwards;
+}
+@keyframes termIn { to { transform: rotate(1.5deg) translateY(0); opacity: 1; } }
+.term .bar { display: flex; gap: 6px; margin-bottom: 10px; }
+.term .bar i { width: 10px; height: 10px; border-radius: 50%; }
+.term .bar i.r { background: var(--term-mark); }
+.term .bar i.y { background: var(--term-mark2); }
+.term .bar i.g { background: var(--term-mark3); }
+.term .bar span { color: var(--term-dim); font-size: 11px; margin-left: 8px; }
+.term .p { color: var(--accent-hi); }
+.term .g { color: #a5d6a7; }
+.term .b { color: #82aaff; }
+.term .gr { color: #8a8a8a; }
+
+.cur {
+  display: inline-block;
+  width: 8px; height: 14px;
+  background: var(--accent-hi);
+  vertical-align: -2px;
+  animation: blink 1.1s steps(1) infinite;
+}
+@keyframes blink { 50% { opacity: 0 } }
+
+/* 色块：弹入 + 漂浮 */
+.tl {
+  border-radius: 14px;
+  position: absolute;
+  opacity: 0;
+  animation: pop .55s var(--ease) forwards, floaty var(--fd, 5s) ease-in-out var(--fdel, 1.4s) infinite;
+}
+@keyframes pop {
+  from { opacity: 0; transform: rotate(var(--r, 0deg)) scale(.55); }
+  to   { opacity: 1; transform: rotate(var(--r, 0deg)) scale(1); }
+}
+@keyframes floaty { 0%, 100% { margin-top: 0; } 50% { margin-top: -9px; } }
+.t1 { width: 120px; height: 120px; background: var(--c-purple); left: 960px; top: 430px; --r: -4deg; animation-delay: .62s; --fd: 4.6s; --fdel: 1.3s; }
+.t2 { width: 78px;  height: 78px;  background: var(--c-pink);   left: 1105px; top: 400px; --r:  3deg; animation-delay: .74s; --fd: 5.4s; --fdel: 1.5s; }
+.t3 { width: 96px;  height: 96px;  background: var(--c-green);  left: 1180px; top: 505px; --r: -2deg; animation-delay: .86s; --fd: 5s;   --fdel: 1.7s; }
+.t4 { width: 60px;  height: 60px;  background: var(--c-yellow); left: 905px;  top: 560px; --r:  5deg; animation-delay: .98s; --fd: 4.2s; --fdel: 1.4s; }
+.t5 { width: 84px;  height: 84px;  background: var(--c-blue);   left: 1285px; top: 420px; --r: -6deg; animation-delay: 1.1s;  --fd: 5.8s; --fdel: 1.6s; }
+.t6 { width: 66px;  height: 66px;  background: var(--c-orange); left: 1040px; top: 585px; --r:  2deg; animation-delay: 1.22s; --fd: 4.9s; --fdel: 1.8s; }
+
+/* 批注 + 草稿圈 + 箭头 */
+.scrib { position: absolute; border: 1.5px dashed var(--scribble); border-radius: 50%; opacity: 0; animation: fade .5s ease 1.35s forwards; }
+.sc1   { left: 936px; top: 408px; width: 150px; height: 150px; transform: rotate(-8deg); }
+.anno  { position: absolute; font-family: var(--mono); font-size: 12.5px; color: var(--anno); transform: rotate(-3deg); opacity: 0; animation: fade .5s ease 1.5s forwards; }
+.a1    { left: 975px; top: 392px; }
+.arrow { position: absolute; left: 890px; top: 330px; transform: rotate(24deg); color: var(--wire); font-size: 22px; font-family: var(--mono); opacity: 0; animation: fade .5s ease 1.6s forwards; }
+
+@keyframes rise { to { opacity: 1; transform: none; } }
+@keyframes fade { to { opacity: 1; } }
+
+/* —— 散场 —— */
+#poster.gone .tl {
+  opacity: 0;
+  transform: rotate(var(--r, 0deg)) translate(var(--dx, 0), var(--dy, -40px)) scale(.8);
+  transition: transform .5s var(--ease), opacity .4s ease;
+}
+.t1 { --dx: -70px; --dy: -60px; }
+.t2 { --dx:  30px; --dy: -80px; }
+.t3 { --dx:  80px; --dy: -20px; }
+.t4 { --dx: -50px; --dy:  60px; }
+.t5 { --dx:  60px; --dy: -70px; }
+.t6 { --dx:  10px; --dy:  80px; }
+#poster.gone .wm,
+#poster.gone .tag,
+#poster.gone .est,
+#poster.gone .term,
+#poster.gone .anno,
+#poster.gone .scrib,
+#poster.gone .arrow {
+  opacity: 0;
+  transform: translateY(-18px);
+  transition: opacity .4s ease, transform .5s var(--ease);
+}
+#poster.gone .term { transform: rotate(1.5deg) translateY(-22px); }
+
+.skip {
+  position: fixed;
+  right: 28px; bottom: 22px;
+  font-size: 12px;
+  color: var(--ink-3);
+  font-family: var(--mono);
+  cursor: pointer;
+  opacity: 0;
+  animation: fade .5s ease 1.8s forwards;
+  z-index: 100;
+}
+.skip:hover { color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

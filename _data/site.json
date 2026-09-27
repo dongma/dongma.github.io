@@ -1,0 +1,12 @@
+{
+  "_comment": "站点级元数据. 之前在 _config.yml, 抽出便于编辑. 模板中用 site.data.site.* 引用.",
+  "title": "dongma.dev",
+  "tagline": "高级开发工程师 · AI Agent / 知识图谱 / 云原生",
+  "description": "记录后端基础设施踩坑笔记：Kafka、Redis、Kubernetes、可观测性；以及 LLM/MCP/LangChain/LangGraph 的工程化实践。",
+  "url": "https://dongma.github.io",
+  "author": {
+    "name": "Sam Ma",
+    "url": "https://dongma.github.io",
+    "email": "sam_newyork@163.com"
+  }
+}

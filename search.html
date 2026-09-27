@@ -1,0 +1,242 @@
+---
+layout: page
+title: 搜索
+permalink: /search/
+---
+
+<script>
+/* 搜索页入场编排（src/05 末段同款） */
+window.RISE_TARGETS = ['.search', '.count', '.tip', '.side', '.pgn', '.row'];
+</script>
+
+<div class="search">
+  <span class="ico">⌕</span>
+  <input class="in" placeholder="搜索文章…" autofocus id="search-q">
+  <span class="kbd">⌘ K</span>
+</div>
+<div class="count" id="search-count">$ grep -c "全部文章" posts/*.md &nbsp;→&nbsp; 找到 <b id="search-count-n">{{ site.posts | size }}</b> 篇文章，按相关度排序</div>
+
+<div class="layout">
+  <div class="main">
+    <div id="search-results">
+      {% assign post_index = 0 %}
+      {% for post in site.posts %}
+      <div class="row" data-idx="{{ post_index }}" data-tags="{{ post.tags | join: ',' }}">
+        <span class="no">{% if forloop.index < 10 %}0{% endif %}{{ forloop.index }}.</span>
+        <a href="{{ post.url | relative_url }}">
+          <h3>{{ post.title }}</h3>
+          <p class="ex">{{ post.excerpt | strip_html | normalize_whitespace | truncate: 120 }}</p>
+          <div class="m">
+            {% if post.tags %}<span class="t">{{ post.tags | first }}</span>{% endif %}
+            <span>{{ post.date | date: "%Y-%m-%d" }}</span>
+            <span>{{ post.content | number_of_words | divided_by: 200 | round | at_least: 1 }} min</span>
+            <span class="arw">→</span>
+          </div>
+        </a>
+      </div>
+      {% assign post_index = post_index | plus: 1 %}
+      {% endfor %}
+    </div>
+
+    <div class="tip">提示：搜索由 <code>Pagefind</code> 静态索引驱动（构建时自动生成，不需要任何后端）。支持 <code>tag:Kafka</code>、<code>after:2026-01</code> 这类过滤语法。当前为静态占位列表，索引将在下一阶段接入。</div>
+
+    <div class="pgn" id="search-pgn"></div>
+  </div>
+
+  <div class="side">
+    <h4>ls tags/ --sort=count</h4>
+    <div class="tagl">
+      <a class="on" data-tag="">全部<span>{{ site.posts | size }}</span></a>
+      {% assign tag_whitelist = "大数据,云原生,Java,JVM,Go,Kafka,K8s,Nginx,Docker,Elasticsearch,前端" | split: "," %}
+      {% for t in tag_whitelist %}
+        {% assign c = 0 %}
+        {% for p in site.posts %}{% if p.tags contains t %}{% assign c = c | plus: 1 %}{% endif %}{% endfor %}
+        {% if c > 0 %}
+        <a data-tag="{{ t }}">{{ t }}<span>{{ c }}</span></a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+/* 客户端搜索 + 分页（Pagefind 接入前先用这个）：
+ *  - 输入框模糊匹配 title + excerpt
+ *  - 每页 4 条，按"过滤后命中集合"分页，不依赖总数
+ *  - 分页按钮动态生成：‹ 1 2 3 … N ›
+ */
+(function () {
+  var PER_PAGE = 4;
+  var input = document.getElementById('search-q');
+  var countEl = document.getElementById('search-count');
+  var pgnEl = document.getElementById('search-pgn');
+  var rows = Array.prototype.slice.call(document.querySelectorAll('#search-results .row'));
+  var currentPage = 1;
+  // 过滤模式：'tag' = 仅按 tags 数组精确匹配（侧栏点击触发）
+  //          'query' = tag ∪ 文本匹配（输入框 / URL 触发，tag 命中排前）
+  var filterMode = 'all';
+
+  if (!input) return;
+
+  // 从 URL ?q= 预填 input（让 header 搜索跳转 / 外部链接能落到正确状态）
+  var urlQ = new URLSearchParams(window.location.search).get('q') || '';
+  if (urlQ) {
+    input.value = urlQ;
+    filterMode = 'query';
+  }
+
+  function highlight(text, q) {
+    if (!q) return text;
+    var i = text.toLowerCase().indexOf(q.toLowerCase());
+    if (i === -1) return text;
+    return text.slice(0, i)
+         + '<mark>' + text.slice(i, i + q.length) + '</mark>'
+         + text.slice(i + q.length);
+  }
+
+  function render() {
+    var q = (input.value || '').trim();
+    var ql = q.toLowerCase();
+
+    // 过滤命中集合：data-tags 精确匹配 ∪ 文本单词边界匹配
+//   - 单词边界 (\b) 避免 "go" 命中 "Google"、"log" 等子串
+//   - 纯中文查询没有 \b 概念，自动回退到 substring
+    var matchedIdx = [];
+    var tagMatched = [];
+    var textMatched = [];
+    var wordRe = null;
+    if (ql) {
+      try {
+        var escaped = ql.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // 两边都卡单词边界，避免 "go" 命中 "google"、"log"
+        wordRe = new RegExp('\\b' + escaped + '\\b', 'i');
+      } catch (e) { wordRe = null; }
+    }
+    rows.forEach(function (r, i) {
+      if (!ql) { matchedIdx.push(i); return; }
+      // 1) tags 数组精确匹配
+      var tags = (r.getAttribute('data-tags') || '')
+        .split(',').map(function (s) { return s.trim().toLowerCase(); })
+        .filter(Boolean);
+      var tagHit = tags.indexOf(ql) !== -1;
+
+      // tag 模式：只收 tag 命中的；query 模式：tag 优先 + 文本补充
+      if (tagHit) { tagMatched.push(i); return; }
+      if (filterMode === 'tag') return;
+
+      // 2) 文本内容单词边界匹配
+      var text = r.textContent;
+      if (wordRe && wordRe.test(text)) { textMatched.push(i); return; }
+      // 3) 纯中文 fallback：subtring
+      if (text.toLowerCase().indexOf(ql) !== -1) textMatched.push(i);
+    });
+    // tag 模式直接用 tagMatched；query 模式 tag 命中排前，文本匹配排后
+    if (ql) matchedIdx = tagMatched.concat(textMatched);
+
+    var total = matchedIdx.length;
+    var totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    // 行显隐
+    rows.forEach(function (r) {
+      var idx = parseInt(r.getAttribute('data-idx'), 10);
+      var rank = matchedIdx.indexOf(idx);
+      if (rank === -1) {
+        r.style.display = 'none';
+      } else {
+        var page = Math.floor(rank / PER_PAGE) + 1;
+        r.style.display = (page === currentPage) ? '' : 'none';
+      }
+    });
+
+    // 计数行
+    countEl.innerHTML = '$ grep -c "' + (q || '全部文章') + '" posts/*.md &nbsp;→&nbsp; 找到 <b>'
+                      + total + '</b> 篇文章，按相关度排序';
+
+    // 分页按钮
+    pgnEl.innerHTML = '';
+    var prev = document.createElement('a');
+    prev.textContent = '‹';
+    if (currentPage === 1) prev.className = 'dis';
+    else prev.addEventListener('click', function () { currentPage--; render(); scrollToResults(); });
+    pgnEl.appendChild(prev);
+
+    function pageBtn(p, label) {
+      var a = document.createElement('a');
+      a.textContent = label || p;
+      if (p === currentPage) a.className = 'cur';
+      else a.addEventListener('click', function () { currentPage = p; render(); scrollToResults(); });
+      return a;
+    }
+
+    // 显示当前页 ± 2 + 首末页
+    var shown = {};
+    function add(p) { shown[p] = true; }
+    add(1); add(totalPages);
+    for (var p = currentPage - 2; p <= currentPage + 2; p++) {
+      if (p > 1 && p < totalPages) add(p);
+    }
+    var list = Object.keys(shown).map(Number).sort(function (a, b) { return a - b; });
+    var last = 0;
+    list.forEach(function (p) {
+      if (last && p - last > 1) {
+        var dots = document.createElement('span');
+        dots.className = 'dots';
+        dots.textContent = '…';
+        pgnEl.appendChild(dots);
+      }
+      pgnEl.appendChild(pageBtn(p));
+      last = p;
+    });
+
+    var next = document.createElement('a');
+    next.textContent = '›';
+    if (currentPage === totalPages) next.className = 'dis';
+    else next.addEventListener('click', function () { currentPage++; render(); scrollToResults(); });
+    pgnEl.appendChild(next);
+
+    // 滚到结果区顶部（仅分页点击时调用，输入/tag 点击不滚，避免页面跳动盖住 header）
+  }
+
+  function scrollToResults() {
+    var first = document.querySelector('#search-results .row:not([style*="display: none"])');
+    if (first) first.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /* 输入/点 tag 后，让当前可见结果重放入场（先下移 32px + 透明，再上滑到位 + 淡入） */
+  function reanimateRows() {
+    var visible = document.querySelectorAll('#search-results .row:not([style*="display: none"])');
+    visible.forEach(function (r, i) {
+      r.classList.remove('rise', 'in');
+      void r.offsetWidth;  /* 强制 reflow，让浏览器认得「状态变了」 */
+      r.classList.add('rise');
+      setTimeout(function () { r.classList.add('in'); }, i * 80);
+    });
+  }
+
+  input.addEventListener('input', function () {
+    currentPage = 1;
+    filterMode = 'query';  // 输入框改写即视为文本搜索
+    render();
+    reanimateRows();
+  });
+
+  // 标签点击过滤（只走 tag 精确匹配）
+  document.querySelectorAll('.tagl a').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      var tag = a.getAttribute('data-tag') || '';
+      document.querySelectorAll('.tagl a').forEach(function (x) { x.classList.remove('on'); });
+      a.classList.add('on');
+      input.value = tag;
+      currentPage = 1;
+      filterMode = tag === '' ? 'all' : 'tag';
+      render();
+      reanimateRows();
+    });
+  });
+
+  render();
+})();
+</script>

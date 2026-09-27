@@ -1,0 +1,111 @@
+{
+  "_comment": "项目页 6 张卡片. 数据来源: lingot(imola/springcloud/spark-graphx) / imola / spark-graphx / distributed-data-computing / springcloud / algorithm. 位置/颜色/旋转/动画在 projects.html 内联样式中.",
+  "title": "项目",
+  "subtitle": "一张草图，六个项目。",
+  "subtitle_code": "按年份倒序 · 位置凭记忆摆",
+  "intro": [
+    "这里只放愿意展开讲的项目——每个都有一段\"问题比答案长\"的经历。左上角的圆点是项目开始的年份，悬停卡片可以看到当时的挑战、方案和结果；想看法宝（全部代码）去底部 GitHub。",
+    "# 阅读顺序：'26 → '23，和踩坑的时间线一致"
+  ],
+  "cards": [
+    {
+      "year": "'26",
+      "index": "01",
+      "title": "imola",
+      "subtitle": "Go 实战训练营",
+      "description": "All-in-one Go web core：HTTP、ORM、cache、微服务一体化内核。",
+      "intro": "《go 实战训练营》学习过程中写的代码，主要包括 server 路由注册、orm 中 SQL 生成与事务操作、分布式缓存和 go 微服务这 4 部分，对后续学习 gin、gorm、gozero 等框架时有指导意义。",
+      "meta": "Go · 个人开源 · 持续投入中",
+      "detail": {
+        "起因": "每个小服务都重复拼 gin + gorm + redis",
+        "现状": "路由分组、连接池、缓存装饰器已完成",
+        "规划": "服务发现与熔断",
+        "link": "github.com/dongma/imola →"
+      }
+    },
+    {
+      "year": "'26",
+      "index": "02",
+      "title": "lingot",
+      "subtitle": "AI Agent 实战集",
+      "description": "MCP / LangChain / LangGraph / Dify / DeepSeek 一站式工程化练习。",
+      "intro": "项目名取自\"灵珠\"——寓意\"灵性的铸块\"。按 LLM 工程师的真实工作流组织子项目：从 MCP 工具协议、LangChain 链式调用、LangGraph 状态机 Agent，到 Dify 工作流与本地 DeepSeek 私有化部署，形成一个完整的 LLM 应用工程化练习体系。",
+      "meta": "Python · LLM · 持续投入中",
+      "detail": {
+        "起因": "AI 工具链碎片化，每个项目从零搭一遍",
+        "现状": "MCP / LangChain / LangGraph / Dify 子项目均已跑通 demo",
+        "规划": "接入 RAG 评估与 Agent 监控体系",
+        "link": "github.com/dongma/lingot →"
+      }
+    },
+    {
+      "year": "'25",
+      "index": "03",
+      "title": "spark-graphx",
+      "subtitle": "Spark 生态学习",
+      "description": "Apache Spark / RDD / DataFrame / GraphX 图计算一站式练习。",
+      "intro": "围绕 Apache Spark 核心数据结构（RDD、DataFrame、Dataset）和核心组件（Spark SQL、Spark Streaming、MLlib、GraphX）做系统性练习，包含算法、图计算、pyspark、spark-cluster、spark-datasets 等子模块。",
+      "meta": "Scala / Python · 大数据 · 已开源",
+      "detail": {
+        "起因": "用 MapReduce 写迭代计算太繁琐",
+        "现状": "Spark Core / SQL / GraphX 核心 API 均已覆盖",
+        "规划": "补 Structured Streaming 与 Delta Lake 实战",
+        "link": "github.com/dongma/spark-graphx →"
+      }
+    },
+    {
+      "year": "'25",
+      "index": "04",
+      "title": "distributed-data-computing",
+      "subtitle": "分布式图数据分析",
+      "description": "基于 Spark 与 Neo4j 的图数据处理 + Hive SQL 实践。",
+      "intro": "整理学习分布式计算和图数据库过程中的实践：Hadoop / Hive / Spark / Neo4j 的使用。子项目 databricks-app 用 Spark + Neo4j 做欺诈检测图分析，hive-sql 整理了 Hive 常见查询场景。",
+      "meta": "Spark / Neo4j / Hive · 大数据",
+      "detail": {
+        "起因": "关系型数据库做图查询性能太差",
+        "现状": "Spark GraphFrames + Neo4j 欺诈检测 demo 跑通",
+        "规划": "迁移到云原生 Spark + 图数据库",
+        "link": "github.com/dongma/distributed-data-computing →"
+      }
+    },
+    {
+      "year": "'24",
+      "index": "05",
+      "title": "springcloud",
+      "subtitle": "Spring Cloud 微服务",
+      "description": "eureka + config + gateway + oauth + order 全链路微服务实践。",
+      "intro": "Spring Cloud 微服务系统设计：eureka-server 做服务发现、Reactive Gateway 做统一入口、config-server 做配置中心、oauth-service 做鉴权、order-service 做下单。完整跑通服务注册 → 网关路由 → 鉴权 → 业务调用 → 配置热更新的全链路。",
+      "meta": "Spring Cloud · 微服务 · 已开源",
+      "detail": {
+        "起因": "单体应用耦合度高，迭代困难",
+        "现状": "注册中心 / 配置中心 / 网关 / 鉴权 / 订单 5 大模块已实现",
+        "规划": "接入 Kubernetes + 服务网格",
+        "link": "github.com/dongma/springcloud →"
+      }
+    },
+    {
+      "year": "'23",
+      "index": "06",
+      "title": "algorithm",
+      "subtitle": "GraphX 图算法",
+      "description": "用 Spark GraphX 实现 PageRank / ConnectedComponents / TriangleCount 等图算法。",
+      "intro": "Spark GraphX 图计算算法练习集：实现 PageRank、ConnectedComponents、TriangleCount、ShortestPaths、Pregel API 等经典图算法，每种算法配 Scala 示例 + 单元测试 + 真实数据集（如社交网络图）验证。",
+      "meta": "Scala / GraphX · 图计算",
+      "detail": {
+        "起因": "图算法只看论文无法落地",
+        "现状": "5 种图算法 + 测试用例已实现",
+        "规划": "增加属性图算法与动态图场景",
+        "link": "github.com/dongma/spark-graphx/tree/master/algorithm →"
+      }
+    }
+  ],
+  "gh_strip": {
+    "mark": "G",
+    "stats": [
+      { "value": 11, "label": "public repos" },
+      { "value": 16, "label": "stars", "highlight": true },
+      { "value": 8, "label": "forks", "highlight": true }
+    ],
+    "link_text": "github.com/dongma →"
+  }
+}

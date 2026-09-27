@@ -1,0 +1,24 @@
+{% comment %}
+  共用 header：logo + nav + ⌘K 搜索胶囊 + GitHub 按钮。
+  当前页对应 nav 项加 <b>，其他不加。
+{% endcomment %}
+{% assign cur = page.url %}
+<header>
+  <a class="logo" href="{{ '/' | absolute_url }}">
+    <span class="prompt">&gt;</span> dongma<span class="dot">.</span>dev
+  </a>
+  <nav>
+    {% if cur == '/' or cur == '/index.html' %}<b>首页</b>{% else %}<a href="{{ '/' | absolute_url }}">首页</a>{% endif %}
+    {% if cur contains '/blog' or cur contains '/tags' %}<b>博客</b>{% else %}<a href="{{ '/blog/' | absolute_url }}">博客</a>{% endif %}
+    {% if cur contains '/projects' %}<b>项目</b>{% else %}<a href="{{ '/projects/' | absolute_url }}">项目</a>{% endif %}
+    {% if cur contains '/about' %}<b>关于</b>{% else %}<a href="{{ '/about/' | absolute_url }}">关于</a>{% endif %}
+    {% unless cur contains '/search' or cur contains '/about' %}
+    <span class="search-pill" id="site-search">
+      <span class="ico">⌕</span>
+      <input class="in" placeholder="搜索…" id="site-search-input">
+      <span class="kbd">⌘ K</span>
+    </span>
+    {% endunless %}
+    <a class="btn" href="https://github.com/dongma" target="_blank" rel="noopener">GitHub ↗</a>
+  </nav>
+</header>

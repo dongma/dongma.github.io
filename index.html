@@ -1,42 +1,108 @@
 ---
-layout: default
+layout: site
 title: Home
 ---
 
-<div class="posts">
-  {% for post in paginator.posts %}
-  <div class="post">
-    <h1 class="post-title">
-      <a href="{{ post.url | absolute_url }}">
-        {{ post.title }}
-      </a>
-    </h1>
+<div class="grid">
 
-    <span class="post-date">{{ post.date | date_to_string }}</span>
-    {{ post.excerpt }}   
-    <p>
-      <h4>
-        <a href="{{ post.url }}">ReadMore &raquo;</a>
-      </h4>
-    </p>
+  <div class="tile a">
+    <h3>{{ site.data.home.series.title }}</h3>
+    <div class="codecard"><span class="ln"><span class="c2">// cache.go</span></span>
+<span class="ln"><span class="k">func</span> <span class="f">Get</span>(key <span class="k">string</span>) (<span class="k">any</span>, <span class="k">error</span>) {</span>
+<span class="ln">  v, err := <span class="f">local</span>.<span class="f">Get</span>(key)</span>
+<span class="ln">  <span class="k">if</span> err == <span class="k">nil</span> { <span class="k">return</span> v }</span>
+<span class="ln">  <span class="k">return</span> <span class="f">redis</span>.<span class="f">Fetch</span>(key) <span class="c2">// singleflight</span></span><span class="cursor"></span></div>
+    <p>{{ site.data.home.series.intro }}</p>
+    <div class="tagrow">
+      {% for t in site.data.home.series.tags %}<span class="tag">{{ t }}</span>{% endfor %}
+    </div>
   </div>
-  {% endfor %}
+
+  {% assign featured = site.posts | first %}
+  <div class="tile b">
+    <h3>{{ featured.title }}</h3>
+    <p>{{ featured.excerpt | strip_html | normalize_whitespace | truncate: 48 }}</p>
+    <div class="tagrow">
+      {% if featured.tags %}{% for t in featured.tags limit:2 %}<span class="tag">{{ t }}</span>{% endfor %}{% endif %}
+      <span class="tag">{{ featured.content | number_of_words | divided_by: 200 | round | at_least: 1 }} min</span>
+    </div>
+  </div>
+
+  <div class="tile c">
+    <h3>{{ site.data.home.tiles.c_github.title }}</h3>
+    <div class="stat">
+      <div><b data-n="{{ site.data.home.github.stars }}" data-suffix="">0</b>{{ site.data.home.tiles.c_github.stat_labels[0] }}</div>
+      <div><b data-n="{{ site.data.home.github.commits }}">0</b>{{ site.data.home.tiles.c_github.stat_labels[1] }}</div>
+    </div>
+    <div class="ghlink">github.com/{{ site.data.home.github.user }} {{ site.data.home.tiles.c_github.link_arrow }}</div>
+  </div>
+
+  <div class="tile d">
+    <h3>{{ site.data.home.tiles.d_recent.title }}</h3>
+    {% for post in site.posts limit:6 %}
+    <div class="post">
+      <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
+      <span class="go">→</span>
+      <span>{{ post.date | date: "%m-%d" }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="tile e">
+    <h3>{{ site.data.home.tiles.e_stack.title }}</h3>
+    <div class="stack">
+      {% for s in site.data.home.site_stack %}
+      <div class="sk"><i>{{ s.label }}</i>{{ s.role }}</div>
+      {% endfor %}
+    </div>
+    <div class="inout">
+      <div class="grp">
+        <span class="lbl">{{ site.data.home.tiles.e_stack.inout_labels[0] }}</span>
+        {% for line in site.data.home.site_stack_io.input %}
+        <div class="line">{{ line.prefix }}
+          {% for it in line.items %}<i>{{ it }}</i>{% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+      <div class="grp r">
+        <span class="lbl">{{ site.data.home.tiles.e_stack.inout_labels[1] }}</span>
+        {% for line in site.data.home.site_stack_io.output %}
+        <div class="line">{{ line }}</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="tile f">
+    <h3>{{ site.data.home.tiles.f_subscribe.title }}</h3>
+    <p>{{ site.data.home.tiles.f_subscribe.desc }}</p>
+    <p class="mono">{{ site.data.home.tiles.f_subscribe.link_text }}</p>
+  </div>
+
 </div>
 
-<div class="pagination">
-  {% if paginator.previous_page %}
-    {% if paginator.page == 2 %}
-      <a class="pagination-item newer" href="{{ '/' | absolute_url }}">Newer</a>
-    {% else %}
-      <a class="pagination-item newer" href="{{ paginator.previous_page_path | absolute_url }}">Newer</a>
-    {% endif %}
-  {% else %}
-    <span class="pagination-item newer">Newer</span>
-  {% endif %}
-
-  {% if paginator.next_page %}
-    <a class="pagination-item older" href="{{ paginator.next_page_path | absolute_url }}">Older</a>
-  {% else %}
-    <span class="pagination-item older">Older</span>
-  {% endif %} 
-</div>
+<script>
+/* 入场编排：按 a→f 错峰（src line 214-218） */
+(function () {
+  var order = ['a', 'b', 'c', 'd', 'e', 'f'];
+  order.forEach(function (cls, i) {
+    setTimeout(function () {
+      var el = document.querySelector('.tile.' + cls);
+      if (el) el.classList.add('in');
+    }, 80 + i * 90);
+  });
+  /* GitHub 数字滚动（src line 220-226） */
+  document.querySelectorAll('[data-n]').forEach(function (el) {
+    var target = +el.dataset.n;
+    var suf = el.dataset.suffix || '';
+    var t0 = performance.now(), dur = 1100;
+    (function step(t) {
+      var p = Math.min((t - t0) / dur, 1);
+      var e = 1 - Math.pow(1 - p, 3);
+      var v = Math.round(target * e);
+      el.textContent = target >= 1000 ? (v / 1000).toFixed(1) + suf : v;
+      if (p < 1) requestAnimationFrame(step);
+    })(t0);
+  });
+})();
+</script>

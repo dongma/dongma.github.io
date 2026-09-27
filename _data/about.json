@@ -1,0 +1,48 @@
+{
+  "_comment": "关于页内容. 终端动画/技能条/经历节点的展示样式仍在 about.md + assets/about.css 中.",
+  "title": "关于",
+  "terminal": {
+    "prompt": "guest@dongma: ~",
+    "whoami": "高级软件开发工程师，专注知识图谱（GDB / 图计算 / 图本体）与 LLM Agent 工程化（LangChain / LangGraph / MCP / Dify）。<br>目前在做的几件事：① Dify工作流的二开与palantir知识本体定义；② 知识图谱与图计算（Neo4j/Spark GraphX）的生产落地；③ 偶尔写写系统性能优化的文章。",
+    "cat_now_txt": {
+      "quote": "把复杂系统讲清楚，比把系统做复杂更难。",
+      "comment": "# 也是这个博客存在的理由"
+    },
+    "uptime_highlight": "9年",
+    "uptime_detail": "后端经验 · 现居北京 · 接受技术交流邮件"
+  },
+  "experience": [
+    {
+      "period": "2021 — 2022",
+      "title": "广联达 · 高级软件开发工程师",
+      "track": "建筑、构件审查、ETL",
+      "summary": "参与审查系统的迭代开发，主导统计分析DWH建模、ETL开发及SQL性能优化，并参与AI审查功能对接TC中台实现图纸自动合规审查。"
+    },
+    {
+      "period": "2018 — 2021",
+      "title": "中数智汇 · 开发工程师",
+      "track": "征信、知识图谱、Neo4j、ElasticSearch、K8s、微服务套件",
+      "summary": "负责图谱产品的迭代研发，并主要推进某银行图谱项目中JanusGraph技术调研、Spark SQL数据抽取及Spark GraphX业务模型开发。\n深入掌握了知识图谱与大数据技术栈，具备从离线计算到线上API的全链路落地能力。"
+    },
+    {
+      "period": "2016 — 2017",
+      "title": "NeoXam · R&D Intern",
+      "track": "资产管理、金融",
+      "summary": "夯实了Oracle PLSQL与WebService技术栈及金融估值业务理解，并积累了从问题定位、性能分析到落地优化的完整实战经验。"
+    }
+  ],
+  "skills": [
+    { "name": "Java / Go", "level": "daily driver", "track": 92 },
+    { "name": "GDB / ES / 微服务套件", "level": "重度使用", "track": 85 },
+    { "name": "Kubernetes / 云原生 / MySQL性能优化", "level": "生产实践", "track": 75 },
+    { "name": "可观测性 / 性能调优", "level": "救火队长", "track": 80 }
+  ],
+  "note": "正在学习：Agent和大模型技术。学习的标准不是\"学过\"，是能给组内做一次分享。",
+  "contact": [
+    "GitHub ↗",
+    "Email",
+    "RSS",
+    "Twitter/X",
+    "微信公众号"
+  ]
+}

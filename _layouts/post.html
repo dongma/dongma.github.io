@@ -1,27 +1,71 @@
 ---
-layout: default
+layout: site
 ---
+{% assign post = page %}
+{% assign _wc = post.content | number_of_words %}
+{% if _wc < 3000 %}{% assign reading_time = 15 %}
+{% elsif _wc < 5000 %}{% assign reading_time = 20 %}
+{% else %}{% assign reading_time = 25 %}{% endif %}
 
-<div class="post">
-  <h1 class="post-title">{{ page.title }}</h1>
-  <span class="post-date">{{ page.date | date_to_string }}</span>
-  {{ content }}
-</div>
+<script>
+/* 文章页入场编排目标（src/02 line 127） */
+window.RISE_TARGETS = ['.meta', 'h1', '.lede', '.article>h2', '.article>p', '.codeblock', '.pn', '.rel'];
+</script>
 
-{% if site.related_posts.size >= 1 %}
-<div class="related">
-  <h2>相关文章推荐</h2>
-  <ul class="related-posts">
-    {% for post in site.related_posts limit:3 %}
-      <li>
-        <h3>
-          <a href="{{ site.baseurl }}{{ post.url }}">
-            {{ post.title }}
-            <small>{{ post.date | date_to_string }}</small>
-          </a>
-        </h3>
-      </li>
-    {% endfor %}
-  </ul>
-</div>
-{% endif %}
+<article class="article">
+  <div class="meta">
+    {% if post.category %}<b>{{ post.category }}</b>
+    {% elsif post.tags and post.tags.size > 0 %}<b>{{ post.tags | first }}</b>
+    {% endif %}
+    <span>{{ post.date | date: "%Y-%m-%d" }}</span>
+    <span>·</span>
+    <span>{{ reading_time }} min 阅读</span>
+  </div>
+
+  <h1>{{ post.title }}</h1>
+  <p class="lede">{{ post.excerpt | strip_html | normalize_whitespace }}</p>
+  <hr class="divider">
+
+  {% assign body_parts = content | split: '<!-- more -->' %}
+  {% if body_parts.size > 1 %}{{ body_parts[1] }}{% else %}{{ content }}{% endif %}
+
+  {% if post.tags and post.tags.size > 0 %}
+  <div class="tags">
+    {% for t in post.tags %}<span class="tag"># {{ t }}</span>{% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="pn">
+    {% if post.previous %}
+    <a href="{{ post.previous.url | relative_url }}">
+      <small>← 上一篇</small>
+      <div class="t">{{ post.previous.title }}</div>
+    </a>
+    {% else %}
+    <a style="visibility:hidden"><small> </small><div class="t"> </div></a>
+    {% endif %}
+    {% if post.next %}
+    <a href="{{ post.next.url | relative_url }}" class="next">
+      <small>下一篇 →</small>
+      <div class="t">{{ post.next.title }}</div>
+    </a>
+    {% else %}
+    <a class="next" style="visibility:hidden"><small> </small><div class="t"> </div></a>
+    {% endif %}
+  </div>
+
+  {% if site.related_posts and site.related_posts.size > 0 %}
+  <div class="rel">
+    <h3>相关阅读</h3>
+    <div class="relrow">
+      {% assign rcolors = "var(--c-pink),var(--c-green),var(--c-blue)" | split: ',' %}
+      {% for rp in site.related_posts limit:3 %}
+      <a class="c" href="{{ rp.url | relative_url }}" style="background:{{ rcolors[forloop.index0] }}">
+        <h4>{{ rp.title }}</h4>
+        <span>{{ rp.date | date: "%Y-%m-%d" }} · {{ rp.content | number_of_words | divided_by: 200 | round }} min</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</article>

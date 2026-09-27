@@ -1,0 +1,248 @@
+/* assets/home.css — 首页 bento（1:1 对照 src/01_home.html + spec §3.1）
+ *
+ * src/01 是一份自包含 HTML，所有数值与色值以它为标准答案；
+ * tokens.css 里没收录的次级魔法值允许在此直接出现但必须留注释指明出处行号。
+ */
+
+/* —— bento 网格（src line 22-27，162px 硬约束） —— */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: var(--grid-row);   /* 162px */
+  gap: var(--grid-gap);              /* 22px */
+  grid-template-areas:
+    "a a b b"
+    "a a c d"
+    "e e e d"
+    "e e e f";
+}
+
+/* —— 通用 tile（src line 28, 91-92, 94） —— */
+.tile {
+  border-radius: var(--radius-lg);    /* 26px */
+  padding: 28px 32px;
+  position: relative;
+  overflow: hidden;
+  /* 入场编排：默认不可见，靠 .tile.in 触发显形 */
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity .5s var(--ease),
+              transform .5s var(--ease),
+              box-shadow .35s var(--ease);
+}
+.tile.in { opacity: 1; transform: none; }
+
+/* —— h3 / p（src line 29-30, 73-74, 83） —— */
+.tile h3 {
+  font-size: 21px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  letter-spacing: .3px;
+  color: var(--ink-strong);
+  transition: transform .35s var(--ease);
+}
+.tile p {
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: rgba(40,32,24,.72);
+  word-spacing: 1px;
+}
+/* 大格标题更疏朗（src line 74） */
+.a h3, .e h3 { letter-spacing: .8px; }
+
+/* —— 六格底色（src line 31-36） —— */
+.a { grid-area: a; background: #cfc0ec; }
+.b { grid-area: b; background: #f6aeb9; }
+.c { grid-area: c; background: #cfe0a4; }
+.d { grid-area: d; background: #ffe08c; }
+.e { grid-area: e; background: #f8b384; }
+.f { grid-area: f; background: #aed4e6; }
+.f h3 { color: #4a6b8a; }    /* src line 65 */
+
+/* —— tile hover（src line 95-96） —— */
+.grid .tile:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 18px 42px rgba(60,48,30,.14);
+}
+.tile:hover h3 { transform: translateX(2px); }
+
+/* —— A 紫格：光泽扫过 + codecard hover 边框（src line 99-103, 109-110） —— */
+.a { position: relative; overflow: hidden; }
+.a::after {
+  content: "";
+  position: absolute;
+  top: -60%; left: -80%;
+  width: 50%; height: 220%;
+  background: linear-gradient(105deg, transparent, rgba(255,255,255,.35), transparent);
+  transform: skewX(-18deg);
+  transition: left .7s var(--ease);
+  pointer-events: none;
+}
+.a:hover::after { left: 130%; }
+.codecard { transition: box-shadow .4s var(--ease); position: relative; }
+.a:hover .codecard { box-shadow: 0 0 0 1.5px rgba(255,180,84,.45); }
+
+/* —— 终端代码卡 A 紫格（src line 38-40, 79） —— */
+.codecard {
+  background: var(--term);
+  color: var(--term-ink);
+  border-radius: 14px;
+  padding: 16px 18px;
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  font-size: 12px;
+  line-height: 1.9;
+  max-width: 350px;
+  margin: 14px 0 12px;
+  font-feature-settings: "tnum" 1, "zero" 1, "liga" 0;
+}
+.codecard .ln { display: block; white-space: pre; }
+.codecard .cursor {
+  display: inline-block;
+  width: 7px; height: 13px;
+  background: var(--accent-hi);
+  vertical-align: -2px;
+  animation: blink 1.1s steps(1) infinite;
+  margin-left: 2px;
+}
+@keyframes blink { 50% { opacity: 0 } }
+/* 语法着色（限定在 codecard 内，避免污染 .tile.f） */
+.codecard .k  { color: #c792ea; }
+.codecard .s  { color: #a5d6a7; }
+.codecard .f  { color: #82aaff; }
+.codecard .c2 { color: var(--term-dim); }
+
+/* —— 标签胶囊（src line 42, 44） —— */
+.tagrow { display: flex; gap: 8px; margin-top: 4px; }
+.tag {
+  background: rgba(255,255,255,.55);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+}
+.b .tag { background: rgba(255,255,255,.6); }
+
+/* —— C 绿格 GitHub（src line 46-49, 112-113） —— */
+.stat { display: flex; gap: 10px; margin-top: 8px; }
+.stat div {
+  background: rgba(255,255,255,.55);
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  transition: transform .3s var(--ease);
+}
+.stat div:hover { transform: translateY(-3px); }
+.stat b {
+  font-size: 16px;
+  display: block;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: .5px;
+}
+.ghlink {
+  margin-top: 8px;
+  font-family: monospace;
+  font-size: 11.5px;
+  color: var(--ink-2);
+  letter-spacing: .3px;
+}
+
+/* —— D 黄格最近更新（src line 51-53, 115-118） —— */
+.post {
+  display: flex; justify-content: space-between; align-items: baseline;
+  column-gap: 18px;
+  font-size: 14px; font-weight: 600;
+  color: var(--ink-strong);
+  padding: 9px 0;
+  border-bottom: 1.5px dashed rgba(40,32,24,.25);
+  letter-spacing: .3px;
+  transition: padding .3s var(--ease);
+}
+.post:last-child { border: none; }
+.post span {
+  color: rgba(40,32,24,.6);
+  font-family: monospace;
+  font-size: 12px; font-weight: 400;
+  letter-spacing: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.d .post:hover { padding-left: 8px; }
+.post .go {
+  opacity: 0; margin-right: -14px;
+  transition: opacity .3s var(--ease);
+  font-family: monospace;
+  color: var(--accent-deep);
+}
+.d .post:hover .go { opacity: 1; }
+
+/* —— E 橙格技术栈（src line 55-63, 120-126） —— */
+.stack { display: flex; gap: 14px; margin-top: 16px; }
+.sk {
+  width: 86px;
+  text-align: center;
+  font-size: 12.5px; font-weight: 600;
+  transition: transform .3s var(--ease);
+}
+.sk:hover { transform: translateY(-4px) rotate(-1.5deg); }
+.sk i {
+  display: block; height: 62px;
+  border-radius: 12px; margin-bottom: 7px;
+  background: rgba(255,255,255,.6);
+  font-style: normal;
+  font-family: monospace; font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ink-strong);
+  transition: box-shadow .3s var(--ease);
+}
+.sk:hover i { box-shadow: 0 8px 18px rgba(60,48,30,.18); }
+.inout {
+  display: flex; justify-content: space-between;
+  margin-top: 22px;
+  border-top: 1.5px dashed var(--line-dash);
+  padding-top: 18px;
+}
+.inout .grp { display: flex; flex-direction: column; gap: 12px; }
+.inout .lbl {
+  font-family: monospace; font-size: 10.5px;
+  letter-spacing: 2.5px;
+  color: #c08a3e;
+}
+.inout .line {
+  display: flex; gap: 8px; align-items: center;
+  font-size: 12.5px;
+  color: rgba(40,32,24,.66);
+  letter-spacing: .3px;
+}
+.inout .line i {
+  font-style: normal;
+  font-family: monospace; font-size: 11.5px;
+  color: rgba(40,32,24,.8);
+  background: rgba(255,255,255,.45);
+  border-radius: 8px;
+  padding: 5px 13px;
+  transition: background .3s;
+}
+.inout .line:hover i { background: rgba(255,255,255,.75); }
+.inout .grp.r .line {
+  justify-content: flex-end;
+  font-family: monospace; font-size: 12px;
+  color: var(--ink-2);
+}
+
+/* —— F 蓝格订阅（src line 65, 207-208） —— */
+.f h3 { color: #4a6b8a; }
+.f .mono {
+  margin-top: 8px;
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+/* —— 入场编排 JS 在 _includes/rise.html 触发 —— */
+
+/* —— prefers-reduced-motion（src line 139-143） —— */
+@media (prefers-reduced-motion: reduce) {
+  .tile, .tile.in { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .a::after { display: none; }
+  * { animation: none !important; }
+}

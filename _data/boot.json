@@ -1,0 +1,14 @@
+{
+  "_comment": "首页开场海报 (src/00_boot.html). 样式/坐标/动画时长不在此处维护.",
+  "wordmark": "dongma",
+  "wordmark_dot": ".",
+  "tagline": "backend engineer · blog · boring technology first",
+  "terminal": {
+    "whoami": "知识图谱/ 图数据库 / 图计算 / Agent开发",
+    "uptime": "9 年",
+    "location": "现居北京"
+  },
+  "est": "EST. 2026 — PEKING — DONGMA.DEV",
+  "anno": "← 本站的设计系统",
+  "skip_text": "跳过 ›（点击任意处）"
+}

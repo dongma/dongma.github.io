@@ -1,6 +1,7 @@
 ---
 layout: post
 title: k8s核心组件及pod组件间通信原理
+tags: ["K8s", "云原生"]
 ---
 
 > 介绍`k8s`的核心组件如`Pod`、`Controller`、`StatefulSet`等组件以及组件间通信原理`Service`及`Ingress`服务。
@@ -37,7 +38,9 @@ default via 10.168.0.1 dev eth0
 10.168.0.0/24 dev eth0 proto kernel scope link src 10.168.0.2
 ```
 
-`node`跨主机通信引入了`flannel`组件，从`node1`请求`node2`在每个组件对请求包进行分发（`docker0`、`flannel`）,`flannel`包含子网在`node2`地址在`subnet`范围内，则对请求包进行分发最终达到`node2`上的`container`。
+`node`跨主机通信引入了`flannel`组件，从`node1`请求`node2`在每个组件对请求包进行分发（`docker0`、`flannel`）。
+
+`flannel`包含子网在`node2`地址在`subnet`范围内，则对请求包进行分发最终达到`node2`上的`container`。
 
 `flannel`项目里一个非常重要的概念子网（`subnet`），在由`flannel`管理的容器网络里，一台宿主机上的所有容器，都属于该宿主机被分配的一个“子网”。在我们的例子中，`node 1` 的子网是`100.96.1.0/24`，`container-1` 的`IP`地址是`100.96.1.2`。`node 2`的子网是 `100.96.2.0/24`，`container-2`的 IP地址是`100.96.2.3`。
 
@@ -57,7 +60,9 @@ default via 10.168.0.1 dev eth0
 
 接下来，`cni bridge`调用`cni ipam`插件 从`ipam.subnet`子网中给容器`eth0`网卡分配`ip`地址同时设置`default route`配置，最后`cni bridge`插件为`cni`网桥设置`ip`地址。
 
-三层网络特点：通过`ip route`得到数据传输路由，跨节点传输`ip`包时会将`route`中`geteway`的`mac`地址作为`ip`包的请求头用于数据包传输，到达目标`node`时 进行拆包，然后根据`ip`包去除`dest`地址并根据当前`node`的`route`列表，将数据包转发到相应`container`中。
+三层网络特点：通过`ip route`得到数据传输路由，跨节点传输`ip`包时会将`route`中`geteway`的`mac`地址作为`ip`包的请求头用于数据包传输。
+
+到达目标`node`时进行拆包，然后根据`ip`包去除`dest`地址并根据当前`node`的`route`列表，将数据包转发到相应`container`中。
 优缺点：避免了额外的封包、拆包操作 性能较好，但要求集群宿主机间是二层连通的；
 隧道模式：隧道模式通过`BGP`维护路由关系，其会将集群节点的`ip` 对应`gateway` 保存在当前节点的路由中，在请求发包时数据包`mac`头地址指定为路由`gateway`地址。
 优缺点：需维护集群中所有`container`的连接信息，当集群中容器数量较大时`BGP`会爆炸增长，此时可切换至集群中某几个节点维护网络关系，剩余的节点从主要节点同步路由信息。

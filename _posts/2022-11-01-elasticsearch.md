@@ -1,6 +1,7 @@
 ---
 layout: post
 title: Elasticsearch核心技术与实战
+tags: ["Elasticsearch", "大数据"]
 ---
 在极客时间上学习`elasticsearch`课程，主要关注点在`query`的`DSL`语句以及集群的管理，在本地基于`es 7.1`来构建集群服务，启动脚本如下，同时在`conf/elasticsearch.yml`中添加`xpack.ml.enabled: false`、`http.host: 0.0.0.0`的配置(禁用`ml`及启用`host`)：
 ```bash

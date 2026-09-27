@@ -1,6 +1,7 @@
 ---
 layout: post
 title: 大数据三架马车之Yarn、BigTable
+tags: ["大数据"]
 ---
 在`Hadoop V1.0`版本中，资源调度部分存在扩展性差、可用性差、资源利用率低的改问题，其中，`Job Tracker`既要做资源管理，又要做任务监控，同时`Job`的并发数页存在限制。同时，`JobTracker`存在单点故障问题，任务调度部分不支持调度流式计算、迭代计算、DAG模型。
 
@@ -27,7 +28,9 @@ message ContainerProto {
 `Container`由`ApplicationMaster`向`ResourceManager`申请的，由`ResourceManager`中的资源调度器异步分配给`ApplicationMaster`。`Container`的运行是由`ApplicationMaster`向资源所在的`NodeManager`发起的，`Container`运行时需提供内部执行的任何命令（比如`Java`、`Python`、`C++`进程启动命令均可）及该命令执行所需的环境变量和外部资源。
 
 ### 资源调度算法及调度器
-调度算法是整个资源管理系统中一个重要的部分，简单地说，调度算法的作用是决定一个计算任务需要放在集群中的哪台机器上面。待调度的任务需考虑资源需求（`CPU`、`Memory`、`Disk`），应用亲和及反亲和性等。
+调度算法是整个资源管理系统中一个重要的部分，简单地说，调度算法的作用是决定一个计算任务需要放在集群中的哪台机器上面。
+
+待调度的任务需考虑资源需求（`CPU`、`Memory`、`Disk`），应用亲和及反亲和性等。
 * `FIFO`调度，先来的先被调用、分配`CPU`、内存等资源，后来的在队列等待。适用于平均计算时间、耗时资源差不多的作业，通常还可匹配优先级，不足在于用户将`Job`作业优先级设置的最高时，会导致排在后面的短任务等待。
 * `SJF（Shortest Job First）`调度，为了改善`FIFO`算法，减少平均周转时间，提出了短作业优先算法。任务执行前预先计算好其执行时间，调度器从中选择用时较短的任务优先执行，但优先级无法保证。
 * 时间片轮转调度`(Round Robin，RR)`，核心思想是`CPU`时间分片（`time slice`）轮转就绪任务，当时间片结束时，任务未执行完时发生时钟中断，调度器会暂停当前任务的执行，并将其置于就绪队列的末尾。此调度优点在于跟任务大小无关，都可获得公平的资源分配。但实现较为复杂，计算框架需支持中断。
@@ -37,7 +40,9 @@ message ContainerProto {
 `Yarn`的三种调度器实现为：`Fair Scheduler`(公平调度器)、`FIFO Scheduler`(先进先出调度器)、`Fair Scheduler`(公平调度器)，`FIFO`先进先出调度器，同一时间队列中只有一个任务在执行，可以充分利用所有的集群资源。`Fair Scheduler`和`Capacity Scheduler`有区别的一些地方，`Fair`队列内部支持多种调度策略，包括`FIFO`、`Fair`、`DRF（Dominant Resource Fairness）`多种资源类型（`e.g.CPU`、内存的公平资源分配策略）。
 
 ### Job提交流程
-在`yarn`上提交`job`的流程如下方的步骤图所示，`yarnRunner`向`rm`申请一个`Application`，`rm`返回一个资源提交路径和`application_id`，客户端提交`job`所需要的资源(切片+配置信息+`jar`包)到资源提交路径。
+在`yarn`上提交`job`的流程如下方的步骤图所示，`yarnRunner`向`rm`申请一个`Application`，`rm`返回一个资源提交路径和`application_id`。
+
+客户端提交`job`所需要的资源(切片+配置信息+`jar`包)到资源提交路径。
 <img src="../../../../resource/2021/yarn/yarn-submit-job.jpg" width="650" alt="yarn上job提交流程"/>
 `Capacity Scheduler`参数调整是在`yarn-site.xml`中，`yarn.resourcemanager.scheduler.class`用于配置调度策略`org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler`。
 
