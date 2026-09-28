@@ -47,14 +47,22 @@ window.RISE_TARGETS = ['.search', '.count', '.tip', '.side', '.pgn', '.row'];
     <h4>ls tags/ --sort=count</h4>
     <div class="tagl">
       <a class="on" data-tag="">全部<span>{{ site.posts | size }}</span></a>
-      {% assign tag_whitelist = "大数据,云原生,Java,JVM,Go,Kafka,K8s,Nginx,Docker,Elasticsearch,前端" | split: "," %}
-      {% for t in tag_whitelist %}
-        {% assign c = 0 %}
-        {% for p in site.posts %}{% if p.tags contains t %}{% assign c = c | plus: 1 %}{% endif %}{% endfor %}
-        {% if c > 0 %}
-        <a data-tag="{{ t }}">{{ t }}<span>{{ c }}</span></a>
-        {% endif %}
-      {% endfor %}
+      {%- assign _all_first = "" -%}
+      {%- for p in site.posts -%}
+        {%- assign _f = p.tags | first -%}
+        {%- if _f -%}
+          {%- assign _exists = false -%}
+          {%- for old in site.posts -%}
+            {%- if old.url < p.url and old.tags and old.tags.first == _f -%}
+              {%- assign _exists = true -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {%- unless _exists -%}
+            {%- assign _c = site.posts | where_exp: "x", "x.tags contains _f" | size -%}
+            <a data-tag="{{ _f }}">{{ _f }}<span>{{ _c }}</span></a>
+          {%- endunless -%}
+        {%- endif -%}
+      {%- endfor -%}
     </div>
   </div>
 </div>
@@ -159,14 +167,14 @@ window.RISE_TARGETS = ['.search', '.count', '.tip', '.side', '.pgn', '.row'];
     var prev = document.createElement('a');
     prev.textContent = '‹';
     if (currentPage === 1) prev.className = 'dis';
-    else prev.addEventListener('click', function () { currentPage--; render(); scrollToResults(); });
+    else prev.addEventListener('click', function () { paginate(function () { currentPage--; render(); }); });
     pgnEl.appendChild(prev);
 
     function pageBtn(p, label) {
       var a = document.createElement('a');
       a.textContent = label || p;
       if (p === currentPage) a.className = 'cur';
-      else a.addEventListener('click', function () { currentPage = p; render(); scrollToResults(); });
+      else a.addEventListener('click', function () { paginate(function () { currentPage = p; render(); }); });
       return a;
     }
 
@@ -193,10 +201,26 @@ window.RISE_TARGETS = ['.search', '.count', '.tip', '.side', '.pgn', '.row'];
     var next = document.createElement('a');
     next.textContent = '›';
     if (currentPage === totalPages) next.className = 'dis';
-    else next.addEventListener('click', function () { currentPage++; render(); scrollToResults(); });
+    else next.addEventListener('click', function () { paginate(function () { currentPage++; render(); }); });
     pgnEl.appendChild(next);
 
     // 滚到结果区顶部（仅分页点击时调用，输入/tag 点击不滚，避免页面跳动盖住 header）
+  }
+
+  function paginate(action) {
+    var main = document.querySelector('.layout .main');
+    main.classList.add('out');
+    setTimeout(function () {
+      action();
+      main.classList.remove('out');
+      main.classList.add('in');
+      reanimateRows();
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          main.classList.remove('in');
+        });
+      });
+    }, 280);
   }
 
   function scrollToResults() {

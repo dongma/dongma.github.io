@@ -187,6 +187,13 @@ h1, h2, h3 { letter-spacing: .4px; }
   color: var(--ink-2);
   background: #fff;
   text-decoration: none;
+  cursor: pointer;
+  transition: background .25s var(--ease), color .25s var(--ease), border-color .25s var(--ease);
+}
+.pgn a:not(.cur):not(.dis):hover {
+  background: rgba(255, 180, 84, .15);
+  border-color: var(--accent-hi);
+  color: var(--accent-deep);
 }
 .pgn a.cur {
   background: var(--term);
@@ -209,6 +216,14 @@ h1, h2, h3 { letter-spacing: .4px; }
 
 /* result 行 transition（src/05 line 142） */
 .row { transition: background .3s var(--ease); }
+/* 翻页动画: main 容器滑出滑入 + 行错峰入场 (与 blog.html 一致) */
+.main { transition: transform .28s var(--ease), opacity .28s var(--ease); }
+.main.out { transform: translate3d(-26px, 0, 0); opacity: 0; }
+.main.in { transition: none; transform: translate3d(26px, 0, 0); opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .tagl a, .row { transition: none !important; }
+  .main, .main.out, .main.in { transition: none !important; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .rise, .rise.in { opacity: 1 !important; transform: none !important; transition: none !important; }
