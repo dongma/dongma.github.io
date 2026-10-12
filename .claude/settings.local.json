@@ -15,7 +15,10 @@
       "Bash(brew upgrade:*)",
       "Bash(npm update:*)",
       "Bash(claudecode)",
-      "Bash(/model minimax-m3:*)"
+      "Bash(/model minimax-m3:*)",
+      "Bash(bundle --version)",
+      "Bash(ruby --version)",
+      "Bash(jekyll --version)"
     ]
   }
 }
