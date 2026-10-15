@@ -66,8 +66,9 @@ title: Home
       </div>
       <div class="grp r">
         <span class="lbl">{{ site.data.home.tiles.e_stack.inout_labels[1] }}</span>
+        {% assign _post_count = site.posts | size %}
         {% for line in site.data.home.site_stack_io.output %}
-        <div class="line">{{ line }}</div>
+          <div class="line">{{ line | replace: '__POST_COUNT__', _post_count }}</div>
         {% endfor %}
       </div>
     </div>

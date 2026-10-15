@@ -2,7 +2,7 @@
 layout: post
 title: MySQL 基础篇
 date: 2025-10-25 +0800
-tags: ["MySQL", "大数据"]
+tags: ["MySQL"]
 ---
 
 <!-- more -->

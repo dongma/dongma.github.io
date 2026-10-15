@@ -1,7 +1,7 @@
 ---
 layout: post
 title: 深入理解kafka消息中间件
-tags: ["Kafka", "大数据"]
+tags: ["Kafka"]
 ---
 ![kafka-message-system](../../../../resource/2019/kafka_message_system.png)
 

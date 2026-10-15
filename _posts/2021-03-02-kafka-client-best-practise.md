@@ -1,7 +1,7 @@
 ---
 layout: post
 title: kafka client客户端实践及原理剖析
-tags: ["Kafka", "大数据"]
+tags: ["Kafka"]
 ---
 
 > 主要描述`kafka java client`的一些实践，以及对`client`操作数据的一些原理进行剖析。

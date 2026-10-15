@@ -2,10 +2,6 @@
 layout: site
 ---
 {% assign post = page %}
-{% assign _wc = post.content | number_of_words %}
-{% if _wc < 3000 %}{% assign reading_time = 15 %}
-{% elsif _wc < 5000 %}{% assign reading_time = 20 %}
-{% else %}{% assign reading_time = 25 %}{% endif %}
 
 <script>
 /* 文章页入场编排目标（src/02 line 127） */
@@ -19,7 +15,7 @@ window.RISE_TARGETS = ['.meta', 'h1', '.lede', '.article>h2', '.article>p', '.co
     {% endif %}
     <span>{{ post.date | date: "%Y-%m-%d" }}</span>
     <span>·</span>
-    <span>{{ reading_time }} min 阅读</span>
+    <span>{% include reading-time.html post=post %} 阅读</span>
   </div>
 
   <h1>{{ post.title }}</h1>

@@ -1,7 +1,7 @@
 ---
 layout: post
 title: 使用kubernetes构建微服务
-tags: ["K8s", "云原生"]
+tags: ["K8s"]
 ---
 ![kubernetes](https://raw.githubusercontent.com/dongma/springcloud/master/kubernetes/images/kubernetes_logo.png)
 <!-- more -->

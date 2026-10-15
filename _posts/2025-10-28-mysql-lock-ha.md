@@ -2,7 +2,7 @@
 layout: post
 title: MySQL实践-锁和高可用
 date: 2025-10-28 +0800
-tags: ["MySQL", "大数据"]
+tags: ["MySQL"]
 ---
 
 <!-- more -->

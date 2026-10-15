@@ -2,7 +2,7 @@
 layout: post
 title: 数据安全和表 join
 date: 2025-10-30 +0800
-tags: ["MySQL", "大数据"]
+tags: ["MySQL"]
 ---
 
 <!-- more -->

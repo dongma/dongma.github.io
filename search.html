@@ -29,7 +29,7 @@ window.RISE_TARGETS = ['.search', '.count', '.tip', '.side', '.pgn', '.row'];
           <div class="m">
             {% if post.tags %}<span class="t">{{ post.tags | first }}</span>{% endif %}
             <span>{{ post.date | date: "%Y-%m-%d" }}</span>
-            <span>{{ post.content | number_of_words | divided_by: 200 | round | at_least: 1 }} min</span>
+            <span>{% include reading-time.html post=post %}</span>
             <span class="arw">→</span>
           </div>
         </a>
@@ -47,20 +47,30 @@ window.RISE_TARGETS = ['.search', '.count', '.tip', '.side', '.pgn', '.row'];
     <h4>ls tags/ --sort=count</h4>
     <div class="tagl">
       <a class="on" data-tag="">全部<span>{{ site.posts | size }}</span></a>
-      {%- assign _all_first = "" -%}
+      {%- assign _pair = "" | split: "" -%}
       {%- for p in site.posts -%}
         {%- assign _f = p.tags | first -%}
         {%- if _f -%}
-          {%- assign _exists = false -%}
+          {%- assign _seen = false -%}
           {%- for old in site.posts -%}
             {%- if old.url < p.url and old.tags and old.tags.first == _f -%}
-              {%- assign _exists = true -%}
+              {%- assign _seen = true -%}
             {%- endif -%}
           {%- endfor -%}
-          {%- unless _exists -%}
+          {%- unless _seen -%}
             {%- assign _c = site.posts | where_exp: "x", "x.tags contains _f" | size -%}
-            <a data-tag="{{ _f }}">{{ _f }}<span>{{ _c }}</span></a>
+            {%- assign _key = 1000 | minus: _c | append: '||' | append: _f -%}
+            {%- assign _pair = _pair | push: _key -%}
           {%- endunless -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {%- assign _sorted = _pair | sort -%}
+      {%- for k in _sorted -%}
+        {%- if forloop.index <= 10 -%}
+          {%- assign _parts = k | split: '||' -%}
+          {%- assign _c = 1000 | minus: _parts[0] | at_least: 0 -%}
+          {%- assign _f = _parts[1] -%}
+          <a data-tag="{{ _f }}">{{ _f }}<span>{{ _c }}</span></a>
         {%- endif -%}
       {%- endfor -%}
     </div>

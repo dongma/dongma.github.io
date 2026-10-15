@@ -27,7 +27,7 @@
       { "prefix": "在啃", "items": ["MCP 协议规范", "LLM 评测"] }
     ],
     "output": [
-      "39 篇博客 · 6 次内部分享",
+      "__POST_COUNT__ 篇博客 · 6 次内部分享",
       "选型原则：boring technology first →"
     ]
   },

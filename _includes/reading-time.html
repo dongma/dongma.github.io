@@ -1,0 +1,1 @@
+{%- assign _wc = include.post.content | number_of_words -%}{% if _wc < 500 -%}{%- assign _rt = 5 -%}{% elsif _wc < 1000 -%}{%- assign _rt = 10 -%}{% elsif _wc < 1500 -%}{%- assign _rt = 15 -%}{% else -%}{%- assign _rt = 20 -%}{%- endif -%}{{ _rt }} min

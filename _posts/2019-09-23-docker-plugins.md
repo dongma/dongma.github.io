@@ -1,7 +1,7 @@
 ---
 layout: post
 title: 使用Docker构建微服务镜像
-tags: ["Docker", "云原生"]
+tags: ["Docker"]
 ---
 ![1569252813951](https://raw.githubusercontent.com/dongma/springcloud/master/document/images/1569252813951.png)
  <!-- more -->

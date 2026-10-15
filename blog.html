@@ -6,9 +6,11 @@ permalink: /blog/
 
 <link rel="stylesheet" href="{{ '/assets/blog.css' | absolute_url }}">
 
+{% assign first_year = site.posts.last.date  | date: '%Y' %}
+{% assign last_year  = site.posts.first.date | date: '%Y' %}
 <div class="count">
   <span>$ grep -c "" _posts/*.md → <b>{{ site.posts | size }}</b> 篇 · 全部公开，点击阅读</span>
-  <span class="rss">VOL.2019—2025 · <b>RSS ↗</b></span>
+  <span class="rss">VOL.{{ first_year }}—{{ last_year }} · <b>RSS ↗</b></span>
 </div>
 
 <div class="cols" id="cols">
