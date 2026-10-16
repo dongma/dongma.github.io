@@ -20,7 +20,8 @@
 | K8s | K8s / 容器编排 | 2 |
 | Kafka | Kafka / Pulsar / 消息队列 | 2 |
 | Docker | Docker / 容器 | 1 |
-| Elasticsearch | ES / OpenSearch / 搜索引擎 | 1 |
+| Elasticsearch | ES / OpenSearch / 搜索引擎 | 3 |
+| HugeGraph | 图数据库 / HugeGraph | 1 |
 
 **打标签规则：**
 1. 每篇**只打一个标签** —— 选最具体的那一个（JVM 比 Java 具体，K8s 比"云原生"具体，Spark 比"大数据"具体，工具名比"云原生"具体）
